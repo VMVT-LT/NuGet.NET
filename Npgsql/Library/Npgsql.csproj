@@ -1,0 +1,41 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<VersionPrefix>0.1.7</VersionPrefix>
+		<Authors>ITS</Authors>
+		<PackageId>Vmvt.Npgsql</PackageId>
+		<Company>VMVT</Company>
+		<Description>Pagalbinė PostgreSql duomenų bazės biblioteka naudojant Npgsql</Description>
+		<PackageProjectUrl>https://github.com/VMVT-LT/NuGet.NET/tree/main/Npgsql/Library</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/VMVT-LT/NuGet.NET</RepositoryUrl>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<PackageTags>csharp;library;github</PackageTags>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<AssemblyName>Vmvt.Npgsql</AssemblyName>
+		<RootNamespace>Vmvt.Npgsql</RootNamespace>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)'=='Debug'">
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)'=='Release'">
+		<GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+		<DebugType>none</DebugType>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Npgsql" Version="10.0.1" />
+	</ItemGroup>
+
+	
+	<ItemGroup>
+		<None Include="../README.md" Pack="true" PackagePath="\"/>
+	</ItemGroup>
+</Project>
+
+

@@ -1,0 +1,43 @@
+name: Test - EntraLogin NuGet
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'EntraLogin/Library/**'
+  workflow_dispatch:
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v6
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: 8.0.x
+        source-url: https://api.nuget.org/v3/index.json
+      env:
+        NUGET_AUTH_TOKEN: ${{ secrets.NUGET_API_KEY }}
+
+    - name: Restore dependencies
+      run: dotnet restore ./EntraLogin/Library/EntraLogin.csproj
+      
+    - name: Calculate Version Suffix
+      id: vars
+      run: |
+        OFFSET=0 
+        BUILD_NUMBER=$((${{ github.run_number }} - $OFFSET))
+        echo "suffix=beta.$BUILD_NUMBER" >> $GITHUB_OUTPUT
+
+    - name: Pack
+      run: |
+        dotnet pack ./EntraLogin/Library/EntraLogin.csproj -c Release -o ./dist --no-restore \
+          --version-suffix "${{ steps.vars.outputs.suffix }}"
+
+    - name: Push to NuGet
+      run: dotnet nuget push ./dist/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json

@@ -1,0 +1,41 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<VersionPrefix>0.1.5</VersionPrefix>
+		<Authors>ITS</Authors>
+		<PackageId>Vmvt.EntraLogin</PackageId>
+		<Company>VMVT</Company>
+		<Description>Microsoft EntraID prisijungimo modelis su papildomu Ldap funkcionalumu</Description>
+		<PackageProjectUrl>https://github.com/VMVT-LT/NuGet.NET/tree/main/EntraLogin/Library</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/VMVT-LT/NuGet.NET</RepositoryUrl>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<PackageTags>csharp;library;github</PackageTags>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<AssemblyName>Vmvt.EntraLogin</AssemblyName>
+		<RootNamespace>Vmvt.EntraLogin</RootNamespace>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)'=='Debug'">
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)'=='Release'">
+		<GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+		<DebugType>none</DebugType>
+	</PropertyGroup>
+	
+	<ItemGroup>
+		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+		<PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.9" />
+		<PackageReference Include="Novell.Directory.Ldap.NETStandard" Version="4.0.0" />
+	</ItemGroup>
+	
+	<ItemGroup>
+		<None Include="../README.md" Pack="true" PackagePath="\"/>
+	</ItemGroup>
+
+</Project>
+

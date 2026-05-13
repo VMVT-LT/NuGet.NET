@@ -1,0 +1,44 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<VersionPrefix>0.1.4</VersionPrefix>
+		<Authors>ITS</Authors>
+		<PackageId>Vmvt.RouteAPI</PackageId>
+		<Company>VMVT</Company>
+		<Description>Supaprastintas Minimal API maršrutų parinkimas</Description>
+		<PackageProjectUrl>https://github.com/VMVT-LT/NuGet.NET/tree/main/RouteAPI/Library</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/VMVT-LT/NuGet.NET</RepositoryUrl>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<PackageTags>csharp;library;github</PackageTags>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<AssemblyName>Vmvt.RouteAPI</AssemblyName>
+		<RootNamespace>Vmvt.RouteAPI</RootNamespace>
+		<OutputType>Library</OutputType>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)'=='Debug'">
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<PackageId>Vmvt.RouteAPI.Swagger</PackageId>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)'=='Release'">
+		<GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+		<DebugType>none</DebugType>
+	</PropertyGroup>
+
+
+	<ItemGroup Condition="'$(Configuration)'=='Debug'">
+		<PackageReference Include="Swashbuckle.AspNetCore" Version="8.1.4" />
+		<PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.24" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="../README.md" Pack="true" PackagePath="\" />
+		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+	</ItemGroup>
+
+</Project>
+
