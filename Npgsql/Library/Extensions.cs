@@ -81,6 +81,7 @@ public static class Extensions {
 						if (i.SubType == typeof(string)) i.Prop.SetValue(t, rdr.GetFieldValue<List<string>>(f));
 						else if (i.SubType == typeof(int)) i.Prop.SetValue(t, rdr.GetFieldValue<List<int>>(f));
 						else if (i.SubType == typeof(long)) i.Prop.SetValue(t, rdr.GetFieldValue<List<long>>(f));
+						else if (i.FieldType == "jsonb") i.Prop.SetValue(t, JsonSerializer.Deserialize(rdr.GetString(f), i.Type));
 					}
 					else if (i.Type.IsClass && i.FieldType == "jsonb")
 						i.Prop.SetValue(t, JsonSerializer.Deserialize(rdr.GetString(f), i.Type));
