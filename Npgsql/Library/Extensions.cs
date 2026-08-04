@@ -8,6 +8,7 @@ namespace Vmvt.Npgsql;
 
 /// <summary>Plėtiniai</summary>
 public static class Extensions {
+	private static readonly JsonSerializerOptions JsonOpts = new() { PropertyNameCaseInsensitive = true };
 	/// <summary>Gauti tekstinę reikšmę</summary>
 	/// <param name="rdr"></param><param name="id"></param><returns></returns>
 	public static string? GetStringN(this NpgsqlDataReader rdr, int id) => !rdr.IsDBNull(id) ? rdr.GetString(id) : null;
@@ -81,10 +82,10 @@ public static class Extensions {
 						if (i.SubType == typeof(string)) i.Prop.SetValue(t, rdr.GetFieldValue<List<string>>(f));
 						else if (i.SubType == typeof(int)) i.Prop.SetValue(t, rdr.GetFieldValue<List<int>>(f));
 						else if (i.SubType == typeof(long)) i.Prop.SetValue(t, rdr.GetFieldValue<List<long>>(f));
-						else if (i.FieldType == "jsonb") i.Prop.SetValue(t, JsonSerializer.Deserialize(rdr.GetString(f), i.Type));
+						else if (i.FieldType == "jsonb") i.Prop.SetValue(t, JsonSerializer.Deserialize(rdr.GetString(f), i.Type, JsonOpts));
 					}
 					else if (i.Type.IsClass && i.FieldType == "jsonb")
-						i.Prop.SetValue(t, JsonSerializer.Deserialize(rdr.GetString(f), i.Type));
+						i.Prop.SetValue(t, JsonSerializer.Deserialize(rdr.GetString(f), i.Type, JsonOpts));
 					else i.Prop.SetValue(t, rdr.GetValue(f));
 				}
 			}
@@ -104,7 +105,7 @@ public static class Extensions {
 		if (!rdr.IsOnRow) if (!await rdr.ReadAsync(ct)) return default;
 		if (!await rdr.IsDBNullAsync(field, ct)) {
 			var str = rdr.GetString(field);
-			return JsonSerializer.Deserialize<T>(str, jso);
+			return JsonSerializer.Deserialize<T>(str, jso ?? JsonOpts);
 		}
 		return default;
 	}
