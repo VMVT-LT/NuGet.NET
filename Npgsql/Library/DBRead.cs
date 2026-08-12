@@ -1,5 +1,6 @@
 ﻿using Npgsql;
 using NpgsqlTypes;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.Json;
 
@@ -194,11 +195,21 @@ public class DBReadPropInfo {
 	/// <summary></summary>
 	public bool	List { get; set; }
 	/// <summary></summary>
+	public Action<object, object> Setter { get; set; }
+	/// <summary></summary>
 	public DBReadPropInfo(PropertyInfo pr) {
 		Prop = pr;
 		Type = Nullable.GetUnderlyingType(pr.PropertyType) ?? pr.PropertyType;
 		SubType = Type.GetGenericArguments().FirstOrDefault();
 		List = SubType is not null && (Type.Name.StartsWith("List") || Type.Name.StartsWith("HashSet"));
+
+		var targetParam = Expression.Parameter(typeof(object), "t");
+		var valueParam = Expression.Parameter(typeof(object), "val");
+		var assignExpression = Expression.Assign(
+			Expression.Property(Expression.Convert(targetParam, pr.DeclaringType!), pr),
+			Expression.Convert(valueParam, pr.PropertyType)
+		);
+		Setter = Expression.Lambda<Action<object, object>>(assignExpression, targetParam, valueParam).Compile();
 	}
 }
 

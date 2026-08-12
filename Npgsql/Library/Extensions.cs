@@ -68,27 +68,30 @@ public static class Extensions {
 		props ??= rdr.GetProps<T>();
 		foreach (var i in props) {
 			var f = i.FieldId;
-			if (!await rdr.IsDBNullAsync(f, ct)) {
-				if (i.Type == typeof(string)) i.Prop.SetValue(t, rdr.GetValue(f));
-				else if (i.Type == typeof(int)) i.Prop.SetValue(t, rdr.GetInt32(f));
-				else if (i.Type == typeof(long)) i.Prop.SetValue(t, rdr.GetInt64(f));
-				else if (i.Type == typeof(float)) i.Prop.SetValue(t, rdr.GetFloat(f));
-				else if (i.Type == typeof(double)) i.Prop.SetValue(t, rdr.GetDouble(f));
-				else if (i.Type == typeof(DateTime)) i.Prop.SetValue(t, rdr.GetDateTime(f));
-				else if (i.Type == typeof(DateOnly)) i.Prop.SetValue(t, rdr.GetDateOnly(f));
-				else if (i.Type == typeof(Guid)) i.Prop.SetValue(t, rdr.GetGuid(f));
-				else {
-					if (i.List) {
-						if (i.SubType == typeof(string)) i.Prop.SetValue(t, rdr.GetFieldValue<List<string>>(f));
-						else if (i.SubType == typeof(int)) i.Prop.SetValue(t, rdr.GetFieldValue<List<int>>(f));
-						else if (i.SubType == typeof(long)) i.Prop.SetValue(t, rdr.GetFieldValue<List<long>>(f));
-						else if (i.FieldType == "jsonb") i.Prop.SetValue(t, JsonSerializer.Deserialize(rdr.GetString(f), i.Type, JsonOpts));
-					}
-					else if (i.Type.IsClass && i.FieldType == "jsonb")
-						i.Prop.SetValue(t, JsonSerializer.Deserialize(rdr.GetString(f), i.Type, JsonOpts));
-					else i.Prop.SetValue(t, rdr.GetValue(f));
-				}
-			}
+			if (await rdr.IsDBNullAsync(f, ct)) continue;
+
+			var val = i.Type switch {
+				_ when i.Type == typeof(string) => rdr.GetString(f),
+				_ when i.Type == typeof(int) => rdr.GetInt32(f),
+				_ when i.Type == typeof(long) => rdr.GetInt64(f),
+				_ when i.Type == typeof(float) => rdr.GetFloat(f),
+				_ when i.Type == typeof(double) => rdr.GetDouble(f),
+				_ when i.Type == typeof(DateTime) => rdr.GetDateTime(f),
+				_ when i.Type == typeof(DateOnly) => rdr.GetDateOnly(f),
+				_ when i.Type == typeof(Guid) => rdr.GetGuid(f),
+				_ when i.List => i.SubType switch {
+					_ when i.SubType == typeof(string) => rdr.GetFieldValue<List<string>>(f),
+					_ when i.SubType == typeof(int) => rdr.GetFieldValue<List<int>>(f),
+					_ when i.SubType == typeof(long) => rdr.GetFieldValue<List<long>>(f),
+					_ when i.SubType == typeof(DateTime) => rdr.GetFieldValue<List<DateTime>>(f),
+					_ when i.SubType == typeof(DateOnly) => rdr.GetFieldValue<List<DateOnly>>(f),
+					_ when i.SubType == typeof(Guid) => rdr.GetFieldValue<List<Guid>>(f),
+					_ => i.FieldType == "jsonb" ? JsonSerializer.Deserialize(rdr.GetString(f), i.Type, JsonOpts) : rdr.GetValue(f)
+				},
+				_ when i.Type.IsClass && i.FieldType == "jsonb" => JsonSerializer.Deserialize(rdr.GetString(f), i.Type, JsonOpts),
+				_ => rdr.GetValue(f)
+			};
+			if (val is not null) i.Setter(t, val);
 		}
 		return t;
 	}
