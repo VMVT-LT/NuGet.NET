@@ -151,3 +151,27 @@ public class RouteParam(string name) {
 
 /// <summary>Užklausos filtras</summary><param name="context"></param><returns></returns>
 public delegate ValueTask<object?> RouteFilter(EndpointFilterInvocationContext context);
+
+
+/// <summary>Standartinis atsako modelis</summary>
+public class DefaultResponse {
+	/// <summary>Atsako kodas</summary>
+	/// <example>200</example>
+	public virtual int Code { get; set; }
+	/// <summary>Atsako statusas</summary>
+	/// <example>Status name</example>
+	public virtual string Status { get; set; }
+	/// <summary>Atsako aprašymas</summary>
+	/// <example>Klaidos žinutė</example>
+	public virtual string Message { get; set; }
+
+	/// <summary></summary>
+	public DefaultResponse() { Message = Status = string.Empty; }
+
+	/// <summary></summary>
+	/// <param name="code"></param>
+	/// <param name="msg"></param>
+	public DefaultResponse(int code, string msg) {
+		Code = code; Message = msg; Status = Microsoft.AspNetCore.WebUtilities.ReasonPhrases.GetReasonPhrase(code);
+	}
+}

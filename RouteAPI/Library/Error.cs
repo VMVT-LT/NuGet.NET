@@ -4,18 +4,9 @@ namespace Vmvt.RouteAPI;
 
 
 /// <summary>Klaidos standartinis modelis</summary>
-public class ErrorResponse {
+public class ErrorResponse : DefaultResponse {
 	/// <summary>Klaidos nuoroda</summary>
 	public Guid Ref { get; set; } = Guid.NewGuid();
-	/// <summary>Klaidos kodas</summary>
-	/// <example>200</example>
-	public virtual int Code { get; set; }
-	/// <summary>Klaidos statusas</summary>
-	/// <example>Error status</example>
-	public virtual string Status { get; set; }
-	/// <summary>Klaidos aprašymas</summary>
-	/// <example>Klaidos žinutė</example>
-	public virtual string Message { get; set; }
 	/// <summary>Klaidos informacija</summary>
 	/// <example>["Papildoma klaidos informacija"]</example>
 	public List<string>? Details { get; set; }

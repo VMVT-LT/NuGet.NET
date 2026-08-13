@@ -122,6 +122,12 @@ public static partial class Extensions {
 	public static int Limit(this int num, int max) => num > max ? max : num;
 
 
+	/// <summary>Standartinis atsakas</summary>
+	public static async Task Ok(this HttpResponse rsp) => await rsp.WriteAsJsonAsync(Ok200);
+	/// <summary>Nerasto resurso klaida</summary>
+	public static async Task Ok(this HttpResponse rsp, string msg) => await rsp.WriteAsJsonAsync(new DefaultResponse(200, msg));
+	private static DefaultResponse Ok200 { get; } = new(200, "Sucess");
+
 	[GeneratedRegex(@"\s+")] private static partial Regex RgxMultiSpace();  /// <summary>Akcento pašalinimas</summary><param name="text"></param><returns></returns>
 	public static string RemoveAccents(this string text) {
 		var str = text.Normalize(NormalizationForm.FormD);
