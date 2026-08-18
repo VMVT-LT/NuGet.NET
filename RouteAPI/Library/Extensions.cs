@@ -118,6 +118,9 @@ public static partial class Extensions {
 	/// <summary></summary><param name="ctx"></param><param name="prm"></param><returns></returns>
 	public static string? ParamStringN(this HttpContext ctx, string prm) => ctx.Request.Query.TryGetValue(prm, out var flg) ? flg.FirstOrDefault() : null;
 
+	/// <summary>Kliento IP (config: </summary><param name="ctx"></param><returns></returns>
+	public static string GetIP(this HttpContext ctx) => ctx.Connection.RemoteIpAddress?.ToString() ?? "0.0.0.0";
+
 	/// <summary></summary><param name="num"></param><param name="max"></param><returns></returns>
 	public static int Limit(this int num, int max) => num > max ? max : num;
 

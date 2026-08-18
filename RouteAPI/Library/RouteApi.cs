@@ -60,6 +60,9 @@ public class RouteApi {
 		builder.WebHost.UseKestrel(option => option.AddServerHeader = false);
 
 		var knownNet = builder.Configuration.GetSection("NetForwarders").Get<List<string>>() ?? [];
+#if DEBUG
+		Console.WriteLine("NetForwarders: " + string.Join(", ", knownNet));
+#endif
 		builder.Services.Configure<ForwardedHeadersOptions>(options => {
 			options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
 			foreach (var i in knownNet) options.KnownNetworks.Add(IPNetwork.Parse(i));
