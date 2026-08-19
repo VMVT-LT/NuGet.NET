@@ -47,7 +47,7 @@ public class AppConfig<T>(DBConfig cfg, DB? conn = null) where T : new() {
 	private DBConfig Cfg { get; set; } = cfg; 
 	private DB? Conn { get; set; } = conn;
 
-	private DateTime? NextReload { get; set; }
+	private DateTime NextReload { get; set; }
 
 	/// <summary>Atnaujinti duomenis</summary>
 	/// <param name="force">Priverstinai atnaujinti</param>
