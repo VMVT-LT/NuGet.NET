@@ -29,7 +29,8 @@ public class RouteApi {
 	/// <summary>Add available routes</summary>
 	public RouteApi(string nameSpace = RouteNamespace) {
 		foreach (string file in Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, $"{nameSpace}.*.dll"))
-			try { Assembly.LoadFrom(file); } catch (Exception ex) {
+			try { Assembly.LoadFrom(file); }
+			catch (Exception ex) {
 				Console.WriteLine($"Error loading assembly {Path.GetFileName(file)}: {ex.Message}");
 			}
 
@@ -42,7 +43,12 @@ public class RouteApi {
 						if (mtd is not null && mtd.ReturnType == typeof(RouteDefinition) && mtd.Invoke(null, null) is RouteDefinition definition)
 							routes.Add(definition);
 					}
-		Endpoints.AddRange(routes.OrderBy(x => x.Tag));
+		var lst = routes.GroupBy(rd => rd.Path).Select(group => {
+			var grp = group.First();
+			var lst = group.SelectMany(rd => rd.Routes).ToList();
+			return new RouteDefinition(grp.Name) { Description = grp.Description, Version = grp.Version, Tag = grp.Tag, Routes = lst };
+		}).ToList().OrderBy(x => x.Tag);
+		Endpoints.AddRange(lst);
 	}
 
 
