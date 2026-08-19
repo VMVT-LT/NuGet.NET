@@ -11,4 +11,4 @@ API example: Example.csproj
 Install NuGet:
 
 ```bash
-dotnet add package Vmvt.Npgsql
+dotnet add package Vmvt.Npgsql 
