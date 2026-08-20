@@ -31,12 +31,18 @@ public class DBRead : IDisposable {
 
 	/// <summary>Gauti objektą iš duomenų bazės jsonb įrašo lauko</summary>
 	/// <typeparam name="T">Objekto klasė</typeparam><param name="ct"></param>
-	/// <param name="field">Lauko numeris</param>
+	/// <param name="field">Lauko numeris</param><param name="jso"></param>
 	/// <returns>Suformuotas objektas</returns>
-	public async Task<T?> GetJsonbObject<T>(int field = 0, CancellationToken ct = default) where T : new() {
+	public async Task<T?> GetJsonbObject<T>(int field = 0, JsonSerializerOptions? jso=null, CancellationToken ct = default) where T : new() {
 		await using var rdr = await GetReader(ct);
-		return await rdr.ReadAsync(ct) ? await rdr.GetFieldValueAsync<T>(field, ct) : default;
+		return await rdr.ReadAsync(ct) ? (
+			jso is null ?
+			await rdr.GetFieldValueAsync<T>(field, ct) :
+			await rdr.GetJsonbObject<T>(field, jso, ct)
+			) : default;
 	}
+
+
 
 	/// <summary>Gauti duomenų rinkinį</summary>
 	/// <typeparam name="T">Duomenų tipas</typeparam><param name="ct"></param>
