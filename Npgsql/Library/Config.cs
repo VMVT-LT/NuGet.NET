@@ -1,7 +1,5 @@
-﻿using System.Data;
+﻿using System.Reflection;
 using System.Text.Json;
-using System.Text.Json.Serialization;
-
 namespace Vmvt.Npgsql;
 
 /// <summary>Konfigūracijos gavimo modelis</summary>
@@ -17,25 +15,75 @@ public class DBConfig {
 	/// <summary>Duomenų atnaujinimo intervalas (sekundės)</summary>
 	public int Reload { get; set; } = 300;
 
-	private string GetSelect() => $@"
-		SELECT jsonb_object_agg(""{Group}"", group_json) AS result FROM (SELECT ""{Group}"", jsonb_object_agg(""{Key}"", CASE 
-		{string.Join(" ", Values!.Select(col => $"WHEN \"{col}\" IS NOT NULL THEN to_jsonb(\"{col}\")"))} END) AS group_json
-		FROM {Table} GROUP BY ""{Group}"") sub;";
-
 	/// <summary>Konfigūracijos duomenų gavimas</summary>
 	/// <typeparam name="T">Duomenų tipas</typeparam>
 	/// <param name="conn">DB prisijungimas</param>
 	public async Task<T> GetConfig<T>(DB? conn = null) where T : new() {
 		if (string.IsNullOrEmpty(Table) || string.IsNullOrEmpty(Group) || string.IsNullOrEmpty(Key) || Values is null || Values.Count == 0)
 			throw new("Missing DBConfig values");
-		using var dbr = new DBRead(GetSelect(), conn) { PrintQuery = false, PrintParams = false };
-		var ret = await dbr.GetJsonbObject<T>(0, opts);
 
+		using var dbr = new DBRead($@"SELECT ""{Group}"", ""{Key}"", ""{string.Join("\",\"", Values)}"" FROM {Table} ORDER By {Group};", conn);
+		using var rdr = await dbr.GetReader();
+		var ret = new T();
 
-		return ret is null ? throw new("Config object not found") : ret;
+		while (await rdr.ReadAsync()) {
+			var g = rdr.GetString(0); var k = rdr.GetString(1);
+			object? value = null;
+			for (int i = 2; i < rdr.FieldCount; i++) {
+				if (!rdr.IsDBNull(i)) { value = rdr.GetValue(i); break; }
+			}
+			if (value is not null) SetProp(ret, g, k, value);
+		}
+		return ret;
 	}
 
-	private static readonly JsonSerializerOptions opts = new() { Converters = { new CfgBoolConverter(), new CfgArrayConverter() } };
+	private static readonly JsonSerializerOptions _jsonOptions = new() {
+		PropertyNameCaseInsensitive = true
+	};
+
+	private static void SetProp(object root, string group, string key, object value) {
+		var gProp = root.GetType().GetProperty(group, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+		if (gProp == null || !gProp.CanRead) return;
+
+		var gObj = gProp.GetValue(root);
+		if (gObj == null && gProp.CanWrite) {
+			gObj = Activator.CreateInstance(gProp.PropertyType);
+			gProp.SetValue(root, gObj);
+		}
+
+		if (gObj != null) {
+			var keyProp = gObj.GetType().GetProperty(key, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+			if (keyProp != null && keyProp.CanWrite) {
+				if (value == null) {
+					keyProp.SetValue(gObj, null);
+					return;
+				}
+
+				if (keyProp.PropertyType.IsAssignableFrom(value.GetType())) {
+					keyProp.SetValue(gObj, value);
+					return;
+				}
+
+				try {
+					object val;
+					if (value is string strVal && keyProp.PropertyType != typeof(string)) {
+						val = JsonSerializer.Deserialize(strVal, keyProp.PropertyType, _jsonOptions)!;
+					}
+					else if (value is JsonElement jsonElement && keyProp.PropertyType != typeof(JsonElement)) {
+						val = jsonElement.Deserialize(keyProp.PropertyType, _jsonOptions)!;
+					}
+					else {
+						var targetType = Nullable.GetUnderlyingType(keyProp.PropertyType) ?? keyProp.PropertyType;
+						val = Convert.ChangeType(value, targetType);
+					}
+					keyProp.SetValue(gObj, val);
+				}
+				catch {
+					// Ignore incompatible values safely
+				}
+			}
+		}
+	}
 }
 
 /// <summary>IS konfigūracija</summary>
@@ -45,17 +93,16 @@ public class DBConfig {
 /// <param name="conn">DB pridijungimas</param>
 public class AppConfig<T>(DBConfig cfg, DB? conn = null) where T : new() {
 	/// <summary>Konfigūracijos duomenys</summary>
-	public T Data => Reload().Result;
+	public T Data => Reload().GetAwaiter().GetResult();
 
 	private T? Cache { get; set; }
-	private DBConfig Cfg { get; set; } = cfg; 
+	private DBConfig Cfg { get; set; } = cfg;
 	private DB? Conn { get; set; } = conn;
-
 	private DateTime NextReload { get; set; }
 
 	/// <summary>Atnaujinti duomenis</summary>
 	/// <param name="force">Priverstinai atnaujinti</param>
-	public async Task<T> Reload(bool force=false) {
+	public async Task<T> Reload(bool force = false) {
 		var now = DateTime.UtcNow;
 		if (force || NextReload < now) {
 			NextReload = now.AddSeconds(Cfg.Reload);
@@ -63,58 +110,4 @@ public class AppConfig<T>(DBConfig cfg, DB? conn = null) where T : new() {
 		}
 		return Cache ?? new();
 	}
-}
-
-/// <summary></summary>
-public class CfgBoolConverter : JsonConverter<bool> {
-	/// <summary></summary><param name="reader"></param><param name="typeToConvert"></param><param name="options"></param>
-	public override bool Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) {
-		switch (reader.TokenType) {
-			case JsonTokenType.Number:
-				if (reader.TryGetInt32(out int num)) return num >= 1; break;
-			case JsonTokenType.String:
-				var str = reader.GetString(); if (int.TryParse(str, out var numVal)) return numVal >= 1;
-				return str?.ToLowerInvariant() switch { "true" or "t" or "y" or "yes" or "taip" => true, _ => false };
-			case JsonTokenType.True: return true;
-			case JsonTokenType.False: return false;
-			case JsonTokenType.Null:
-			default: return default;
-		}
-		return reader.GetBoolean(); // fallback
-	}
-	/// <summary></summary><param name="writer"></param><param name="value"></param><param name="options"></param>
-	public override void Write(Utf8JsonWriter writer, bool value, JsonSerializerOptions options) { writer.WriteBooleanValue(value);	}
-}
-/// <summary></summary>
-public class CfgArrayConverter : JsonConverter<object> {
-	/// <summary></summary><param name="t"></param>
-	public override bool CanConvert(Type t) => t == typeof(string[]) || t == typeof(List<string>);
-	/// <summary></summary><param name="reader"></param><param name="type"></param><param name="options"></param>
-	public override object Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options) {
-		var list = new List<string>();
-		if (reader.TokenType == JsonTokenType.StartArray) {
-			while (reader.Read()) {
-				if (reader.TokenType == JsonTokenType.EndArray) break;
-				list.Add(reader.GetString() ?? string.Empty);
-			}
-		}
-		else if (reader.TokenType == JsonTokenType.String) {
-			var val = reader.GetString();
-			if (!string.IsNullOrEmpty(val)) {
-				try {
-					var parsed = JsonSerializer.Deserialize<List<string>>(val, options);
-					if (parsed != null) list.AddRange(parsed);
-					else throw new Exception();
-				}
-				catch {
-					foreach (var item in val.Split(',', StringSplitOptions.RemoveEmptyEntries)) list.Add(item.Trim());
-				}
-			}
-		}
-		else if (reader.TokenType == JsonTokenType.Null)
-			return type.IsArray ? Array.Empty<string>() : new List<string>();
-		return type.IsArray ? list.ToArray() : list;
-	}
-	/// <summary></summary><param name="writer"></param><param name="value"></param><param name="options"></param>
-	public override void Write(Utf8JsonWriter writer, object value, JsonSerializerOptions options) { JsonSerializer.Serialize(writer, value, options); }
 }
