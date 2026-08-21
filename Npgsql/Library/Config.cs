@@ -28,7 +28,7 @@ public class DBConfig {
 	public async Task<T> GetConfig<T>(DB? conn = null) where T : new() {
 		if (string.IsNullOrEmpty(Table) || string.IsNullOrEmpty(Group) || string.IsNullOrEmpty(Key) || Values is null || Values.Count == 0)
 			throw new("Missing DBConfig values");
-		using var dbr = new DBRead(GetSelect(), conn);
+		using var dbr = new DBRead(GetSelect(), conn) { PrintQuery = false, PrintParams = false };
 		var ret = await dbr.GetJsonbObject<T>(0, opts);
 
 
