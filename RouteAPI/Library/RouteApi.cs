@@ -98,7 +98,7 @@ public class RouteApi {
 						foreach (var i in AllowCors)
 							if (origin.StartsWith(i, StringComparison.OrdinalIgnoreCase)) return true;
 						return false;
-					});
+					}).AllowCredentials().AllowAnyHeader().AllowAnyMethod();
 				});
 			});
 		}
