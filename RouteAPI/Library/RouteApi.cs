@@ -51,6 +51,9 @@ public class RouteApi {
 		Endpoints.AddRange(lst);
 	}
 
+	/// <summary>Leisti naudotis API iš kitų puslapių</summary>
+	public List<string>? AllowCors { get; set; }
+
 
 	/// <summary>Build minimal API app</summary>
 	/// <param name="build">Perform builder configuration</param>
@@ -87,18 +90,30 @@ public class RouteApi {
 
 		if (build is not null) build(builder);
 
+		if (AllowCors?.Count > 0) {
+			builder.Services.AddCors(options => {
+				options.AddPolicy("AllowFrom", policy => {
+					policy.SetIsOriginAllowed(origin => {
+						if (string.IsNullOrEmpty(origin)) return false;
+						foreach (var i in AllowCors)
+							if (origin.StartsWith(i, StringComparison.OrdinalIgnoreCase)) return true;
+						return false;
+					});
+				});
+			});
+		}
+
 		var app = builder.Build(); 
 		app.UseForwardedHeaders();
 		app.UseExceptionHandler(exh => exh.Run(HandleError));
 		app.UseStatusCodePages(async scc => {
 			var ctx = scc.HttpContext;
-		//	switch (ctx.Response.StatusCode) {
-		//		case 401: ctx.Response
-		//	}
 			if (StatusHandler is not null) await StatusHandler(ctx);
 			else if (!ctx.Response.HasStarted) await ctx.Response.Error();
 		});
 		app.UseRouteEndpoints(Endpoints);
+
+		if (AllowCors?.Count > 0) app.UseCors("AllowFrom");
 
 		return app;
 	}
