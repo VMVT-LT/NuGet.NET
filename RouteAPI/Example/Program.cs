@@ -9,7 +9,7 @@ var routes = new RouteApi(
 ) {
 
 	ErrorHandler = async (ctx, err) => {
-		ctx.Response.StatusCode = 200;
+		ctx.Response.StatusCode = 500;
 		await ctx.Response.WriteAsync($"Fatal error: {err.Error.Message}");
 	}
 };
@@ -70,7 +70,7 @@ namespace Example {
 		};
 
 
-		public static RouteFilter RequireRole(params string[] roles) => async (ctx) => {
+		public static Func<EndpointFilterInvocationContext, ValueTask<object?>> RequireRole(params string[] roles) => async (ctx) => {
 			var role = ctx.HttpContext.ParamString("role");
 			if (roles.Contains(role)) {
 				await Task.Delay(50);

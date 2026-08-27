@@ -459,15 +459,15 @@ public class EntraAuth {
 	/// <summary>Būtina vartotojo rolė</summary>
 	/// <param name="roles">Rolių sąrašas</param>
 	public static Func<EndpointFilterInvocationContext, ValueTask<object?>> RequireRole(params string[] roles) {
-
-		return async (ctx) => {
+		return (ctx) => {
 			if (ctx.GetAuth(out var usr)) {
-				if (!usr.MatchRole(roles)) { ctx.HttpContext.Response.StatusCode = 403; return Results.Forbid(); }
+				if (!usr.MatchRole(roles)) { ctx.HttpContext.Response.StatusCode = 403; return new ValueTask<object?>(Results.Forbid()); }
 			}
-			else { ctx.HttpContext.Response.StatusCode = 401; return Results.Unauthorized(); }
-			return null;
+			else { ctx.HttpContext.Response.StatusCode = 401; return new ValueTask<object?>(Results.Unauthorized()); }
+			return new ValueTask<object?>(Results.Ok());
 		};
 	}
+
 	public static Func<EndpointFilterInvocationContext, EndpointFilterDelegate, ValueTask<object?>> RequireRolee(params string[] roles) {
 		return async (ctx, next) => {
 			if (!ctx.GetAuth(out var user)) {

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using System.Diagnostics.Eventing.Reader;
 using System.Reflection;
 using System.Text.Json.Serialization;
 
@@ -111,9 +112,23 @@ public class RouteApi {
 		app.Use(async (ctx, next) => {
 			await next(ctx);
 			var code = ctx.Response.StatusCode;
+
 			if (StatusHandler is not null && code is < 200 or >= 300) {
-				if (!ctx.Response.HasStarted && code == 401) await ctx.Response.E401();
-				await StatusHandler(ctx, ctx.GetError());
+				var err = ctx.GetError();
+				if (ctx.IsJson()) {
+					if (!ctx.Response.HasStarted) {
+						if (err is not null) await ctx.Response.WriteAsJsonAsync(err);
+						else err = code switch {
+							400 => await ctx.Response.E400(),
+							401 => await ctx.Response.E401(),
+							403 => await ctx.Response.E403(),
+							404 => await ctx.Response.E404(),
+							_ => await ctx.Response.Error(code, "Nenumatyta klaida"),
+						};
+					}
+				}
+				else if (code is 301 or 302 or 306 or 307) return;
+				await StatusHandler(ctx, err);
 			}
 		});
 
