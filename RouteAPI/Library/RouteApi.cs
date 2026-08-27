@@ -115,7 +115,8 @@ public class RouteApi {
 
 			if (StatusHandler is not null && code is < 200 or >= 300) {
 				var err = ctx.GetError();
-				if (ctx.IsJson()) {
+				if (err is null && code is >=300 and < 400) return;
+				else if (ctx.IsJson()) {
 					if (!ctx.Response.HasStarted) {
 						if (err is not null) await ctx.Response.WriteAsJsonAsync(err);
 						else err = code switch {
@@ -127,7 +128,6 @@ public class RouteApi {
 						};
 					}
 				}
-				else if (code is 301 or 302 or 306 or 307) return;
 				await StatusHandler(ctx, err);
 			}
 		});

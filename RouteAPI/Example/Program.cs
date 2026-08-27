@@ -70,11 +70,11 @@ namespace Example {
 		};
 
 
-		public static Func<EndpointFilterInvocationContext, ValueTask<object?>> RequireRole(params string[] roles) => async (ctx) => {
+		public static Func<EndpointFilterInvocationContext, EndpointFilterDelegate, ValueTask<object?>> RequireRole(params string[] roles) => async (ctx, next) => {
 			var role = ctx.HttpContext.ParamString("role");
 			if (roles.Contains(role)) {
 				await Task.Delay(50);
-				return null; //Tęsti vykdymą
+				return await next(ctx); //Tęsti vykdymą
 			}
 			return Results.Unauthorized(); //ctx.Response.E401();
 		};

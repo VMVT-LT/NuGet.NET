@@ -447,42 +447,23 @@ public class EntraAuth {
 	}
 
 	/// <summary>Būtinas prisijungimas</summary>
-	/// <param name="ctx"></param>
-	public static ValueTask<object?> RequireLogin(EndpointFilterInvocationContext ctx) {
-		if (!ctx.GetAuth(out _)) {
-			ctx.HttpContext.Response.StatusCode = 401;
-			return ValueTask.FromResult<object?>(Results.Unauthorized());
-		}
-		return ValueTask.FromResult<object?>(null);
+	/// <param name="ctx"></param><param name="next"></param>
+	public static async ValueTask<object?> RequireLogin(EndpointFilterInvocationContext ctx, EndpointFilterDelegate next) {
+		if (!ctx.GetAuth(out _)) { ctx.HttpContext.Response.StatusCode = 401; return Results.Unauthorized(); }
+		return await next(ctx);
 	}
 
 	/// <summary>Būtina vartotojo rolė</summary>
 	/// <param name="roles">Rolių sąrašas</param>
-	public static Func<EndpointFilterInvocationContext, ValueTask<object?>> RequireRole(params string[] roles) {
-		return (ctx) => {
-			if (ctx.GetAuth(out var usr)) {
-				if (!usr.MatchRole(roles)) { ctx.HttpContext.Response.StatusCode = 403; return new ValueTask<object?>(Results.Forbid()); }
-			}
-			else { ctx.HttpContext.Response.StatusCode = 401; return new ValueTask<object?>(Results.Unauthorized()); }
-			return new ValueTask<object?>(Results.Ok());
-		};
-	}
-
-	public static Func<EndpointFilterInvocationContext, EndpointFilterDelegate, ValueTask<object?>> RequireRolee(params string[] roles) {
+	public static Func<EndpointFilterInvocationContext, EndpointFilterDelegate, ValueTask<object?>> RequireRole(params string[] roles) {
 		return async (ctx, next) => {
-			if (!ctx.GetAuth(out var user)) {
-				ctx.HttpContext.Response.StatusCode = 401;
-				return Results.Unauthorized();
+			if (ctx.GetAuth(out var usr)) {
+				if (!usr.MatchRole(roles)) { ctx.HttpContext.Response.StatusCode = 403; return Results.Forbid(); }
 			}
-
-			// Adjust role validation based on your auth object structure
-			// if (!roles.Any(role => user.IsInRole(role))) {
-			//     ctx.HttpContext.Response.StatusCode = 403;
-			//     return Results.Forbid();
-			// }
-
+			else { ctx.HttpContext.Response.StatusCode = 401; return Results.Unauthorized(); }
 			return await next(ctx);
 		};
 	}
+
 }
 

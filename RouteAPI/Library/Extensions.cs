@@ -30,7 +30,7 @@ public static partial class Extensions {
 			foreach (var j in i.Routes) {
 				foreach (var k in j.Routes) {
 					var m = app.Attach(k); eps++;
-					if (k.Filter is not null) m.AddEndpointFilter(async (ctx, next) => await k.Filter(ctx));
+					if (k.Filter is not null) m.AddEndpointFilter(k.Filter);
 					
 
 #if DEBUG //Disable Swagger
