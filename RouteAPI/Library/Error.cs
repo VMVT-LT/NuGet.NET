@@ -30,11 +30,8 @@ public static class ErrorExtensions {
 	/// <summary></summary><param name="rsp"></param>
 	/// <param name="err"></param><returns></returns>
 	public static async Task<ErrorResponse> Error(this HttpResponse rsp, ErrorResponse err) {
-		if (!rsp.HasStarted) {
-			rsp.StatusCode = err.Code;
-			await rsp.WriteAsJsonAsync(err);
-		}
-		return err;
+		if (!rsp.HasStarted) { rsp.StatusCode = err.Code; await rsp.WriteAsJsonAsync(err); }
+		rsp.HttpContext.Items["Err"] = err; return err;
 	}
 
 	/// <summary></summary><param name="rsp"></param><param name="msg"></param><returns></returns>

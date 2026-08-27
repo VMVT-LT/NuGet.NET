@@ -445,5 +445,44 @@ public class EntraAuth {
 			throw new EntraException(267, "Entra.Session", "Nepavyko inicijuoti sesijos", ex);
 		}
 	}
+
+	/// <summary>Būtinas prisijungimas</summary>
+	/// <param name="ctx"></param>
+	public static ValueTask<object?> RequireLogin(EndpointFilterInvocationContext ctx) {
+		if (!ctx.GetAuth(out _)) {
+			ctx.HttpContext.Response.StatusCode = 401;
+			return ValueTask.FromResult<object?>(Results.Unauthorized());
+		}
+		return ValueTask.FromResult<object?>(null);
+	}
+
+	/// <summary>Būtina vartotojo rolė</summary>
+	/// <param name="roles">Rolių sąrašas</param>
+	public static Func<EndpointFilterInvocationContext, ValueTask<object?>> RequireRole(params string[] roles) {
+
+		return async (ctx) => {
+			if (ctx.GetAuth(out var usr)) {
+				if (!usr.MatchRole(roles)) { ctx.HttpContext.Response.StatusCode = 403; return Results.Forbid(); }
+			}
+			else { ctx.HttpContext.Response.StatusCode = 401; return Results.Unauthorized(); }
+			return null;
+		};
+	}
+	public static Func<EndpointFilterInvocationContext, EndpointFilterDelegate, ValueTask<object?>> RequireRolee(params string[] roles) {
+		return async (ctx, next) => {
+			if (!ctx.GetAuth(out var user)) {
+				ctx.HttpContext.Response.StatusCode = 401;
+				return Results.Unauthorized();
+			}
+
+			// Adjust role validation based on your auth object structure
+			// if (!roles.Any(role => user.IsInRole(role))) {
+			//     ctx.HttpContext.Response.StatusCode = 403;
+			//     return Results.Forbid();
+			// }
+
+			return await next(ctx);
+		};
+	}
 }
 

@@ -106,12 +106,16 @@ public class RouteApi {
 		var app = builder.Build(); 
 		app.UseForwardedHeaders();
 		app.UseExceptionHandler(exh => exh.Run(HandleError));
-		app.UseStatusCodePages(async scc => {
-			var ctx = scc.HttpContext;
-			if (StatusHandler is not null) await StatusHandler(ctx);
-			else if (!ctx.Response.HasStarted) await ctx.Response.Error();
-		});
 		app.UseRouteEndpoints(Endpoints);
+
+		app.Use(async (ctx, next) => {
+			await next(ctx);
+			var code = ctx.Response.StatusCode;
+			if (StatusHandler is not null && code is < 200 or >= 300) {
+				if (!ctx.Response.HasStarted && code == 401) await ctx.Response.E401();
+				await StatusHandler(ctx, ctx.GetError());
+			}
+		});
 
 		if (AllowCors?.Count > 0) app.UseCors("AllowFrom");
 
@@ -119,23 +123,16 @@ public class RouteApi {
 	}
 
 	/// <summary>Statuso aprodorojimas</summary>
-	public Func<HttpContext, Task>? StatusHandler { get; set; }
+	public Func<HttpContext, ErrorResponse?, Task>? StatusHandler { get; set; }
 
 	/// <summary>Klaidų aprodorojimas</summary>
 	public Func<HttpContext, IExceptionHandlerFeature, Task> ErrorHandler { get; set; } = async (ctx, ex) => await ctx.Response.WriteAsync("Error...");
 
 	private async Task HandleError(HttpContext ctx) {
 		var ex = ctx.Features.Get<IExceptionHandlerFeature>();
-		if (StatusHandler is not null && ctx.Items.TryGetValue("Err", out var obj) && obj is int val) {
-			switch (val) {
-				case 401: await ctx.Response.E401(); break;
-				case 403: await ctx.Response.E403(); break;
-				case 404: await ctx.Response.E404(); break;
-				default: ctx.Response.StatusCode = val; break;
-			}
-			await StatusHandler(ctx);
-		}
-		else if (ex is not null && ex.Error is not null) await ErrorHandler(ctx, ex);
+		if (ex is not null && ex.Error is not null) await ErrorHandler(ctx, ex);
+		else if (StatusHandler is not null) await StatusHandler(ctx, ctx.GetError());
+
 	}
 }
 

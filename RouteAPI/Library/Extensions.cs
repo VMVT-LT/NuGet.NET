@@ -30,7 +30,9 @@ public static partial class Extensions {
 			foreach (var j in i.Routes) {
 				foreach (var k in j.Routes) {
 					var m = app.Attach(k); eps++;
-					if (k.Filter is not null) m.AttachFilter(k.Filter);
+					if (k.Filter is not null) m.AddEndpointFilter(async (ctx, next) => await k.Filter(ctx));
+					
+
 #if DEBUG //Disable Swagger
 					m.Produces(k.Status, k.Response)
 					.WithOpenApi(o => {
@@ -76,9 +78,6 @@ public static partial class Extensions {
 	}).EPFilter(route);
 
 
-	/// <summary>Pridėti filtro funkciją</summary><param name="builder"></param><param name="filter"></param><returns></returns>
-	public static RouteHandlerBuilder AttachFilter(this RouteHandlerBuilder builder, RouteFilter filter) =>
-		builder.AddEndpointFilter(async (ctx, next) => await filter(ctx) ?? await next(ctx));
 
 	/// <summary>Registruoti API atsakymo klaidas</summary>
 	/// <param name="builder"></param><param name="err"></param><returns></returns>
@@ -124,6 +123,9 @@ public static partial class Extensions {
 	/// <summary></summary><param name="num"></param><param name="max"></param><returns></returns>
 	public static int Limit(this int num, int max) => num > max ? max : num;
 
+
+	/// <returns>Gauti klaidos informaciją</returns>
+	public static ErrorResponse? GetError(this HttpContext ctx) => ctx.Items.TryGetValue("Err", out var e) && e is ErrorResponse err ? err : null;
 
 	/// <summary>Standartinis atsakas</summary>
 	public static async Task Ok(this HttpResponse rsp) => await rsp.WriteAsJsonAsync(Ok200);

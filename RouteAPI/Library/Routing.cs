@@ -84,7 +84,7 @@ public class Route(string path, Delegate hnd, Method method = Method.Get) {
 	/// <summary>Funkcija paleidžiama po pagrindinės užklausos</summary>
 	[JsonIgnore] public Func<HttpContext, Task<bool>>? After { get; set; }
 	/// <summary>Maršruto filtras</summary>
-	[JsonIgnore] public RouteFilter? Filter { get; set; }
+	[JsonIgnore] public Func<EndpointFilterInvocationContext, ValueTask<object?>>? Filter { get; set; }
 }
 
 
@@ -149,8 +149,7 @@ public class RouteParam(string name) {
 #endif
 }
 
-/// <summary>Užklausos filtras</summary><param name="context"></param><returns></returns>
-public delegate ValueTask<object?> RouteFilter(EndpointFilterInvocationContext context);
+
 
 
 /// <summary>Standartinis atsako modelis</summary>

@@ -128,17 +128,19 @@ public static class Extensions {
 
 
 
-
-
+	private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<ParameterInfo, System.Reflection.NullabilityInfo> _nullabilityCache = [];
+	private static readonly UserSession _nullSession = new() { Session = new() };
 	/// <summary>Vartotojo sesijos gavimas</summary>
 	/// <param name="ctx"></param><param name="prm"></param><returns></returns>
 	public static ValueTask<UserSession?> SessionService(HttpContext ctx, ParameterInfo prm) {
 		if (ctx.GetAuth(out var usr) && usr is not null) return ValueTask.FromResult<UserSession?>(usr);
-		if (prm.ParameterType == typeof(UserSession))
-			if (new NullabilityInfoContext().Create(prm).WriteState is NullabilityState.Nullable)
-				return ValueTask.FromResult<UserSession?>(null);
-		ctx.Items["Err"] = 401;
-		throw new EntraException(275, "Entra.Session", "Vartotojo sesija nerasta");
+		ctx.Response.StatusCode = 401;
+		if (prm.ParameterType == typeof(UserSession)) {
+			if (!_nullabilityCache.TryGetValue(prm, out var nullability)) 
+				_nullabilityCache.Add(prm, nullability = new NullabilityInfoContext().Create(prm));
+			if (nullability.WriteState == NullabilityState.Nullable) return ValueTask.FromResult<UserSession?>(null);
+		}
+		return ValueTask.FromResult<UserSession?>(_nullSession);
 	}
 
 
@@ -158,6 +160,7 @@ public static class SessionExtensions {
 	/// <param name="ctx"></param>
 	/// <returns>Gauti vartotojo informaciją</returns>
 	public static UserSession? GetUser(this HttpContext ctx) => ctx.Items.TryGetValue("User", out var usr) && usr is UserSession uss ? uss : null;
+
 
 	/// <summary>Gauti vartotojo autorizaciją</summary>
 	/// <param name="ctx"></param><param name="usr"></param>
