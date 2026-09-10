@@ -449,7 +449,7 @@ public class EntraAuth {
 	/// <summary>Būtinas prisijungimas</summary>
 	/// <param name="ctx"></param><param name="next"></param>
 	public static async ValueTask<object?> RequireLogin(EndpointFilterInvocationContext ctx, EndpointFilterDelegate next) {
-		if (!ctx.GetAuth(out _)) { ctx.HttpContext.Response.StatusCode = 401; return Results.Unauthorized(); }
+		if (!ctx.GetAuth(out _)) { ctx.HttpContext.Response.StatusCode = 401; return Results.StatusCode(401); }
 		return await next(ctx);
 	}
 
@@ -458,9 +458,9 @@ public class EntraAuth {
 	public static Func<EndpointFilterInvocationContext, EndpointFilterDelegate, ValueTask<object?>> RequireRole(params string[] roles) {
 		return async (ctx, next) => {
 			if (ctx.GetAuth(out var usr)) {
-				if (!usr.MatchRole(roles)) { ctx.HttpContext.Response.StatusCode = 403; return Results.Forbid(); }
+				if (!usr.MatchRole(roles)) { ctx.HttpContext.Response.StatusCode = 403; return Results.StatusCode(403); }
 			}
-			else { ctx.HttpContext.Response.StatusCode = 401; return Results.Unauthorized(); }
+			else { ctx.HttpContext.Response.StatusCode = 401; return Results.StatusCode(401); }
 			return await next(ctx);
 		};
 	}
