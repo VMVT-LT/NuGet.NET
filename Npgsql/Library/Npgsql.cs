@@ -7,14 +7,14 @@ namespace Vmvt.Npgsql;
 /// <summary>Duomenų bazės pagalbininkas</summary>
 /// <remarks>Inicijuoti naują prisijungimą</remarks>
 /// <param name="connStr">DB prisijungimo duomenys</param>
-public class DB(string connStr) {
+public class DB {
 	private static readonly JsonSerializerOptions _jso = new() { PropertyNameCaseInsensitive = true };
 	
 	/// <summary>Standartinis DB prisijungimas</summary>
 	public static DB Default { get; set; } = new("User ID=postgres; Password=postgres; Server=localhost:5432; Database=postgres;");
 
 	/// <summary>Duomenų bazės prisijungimas</summary>
-	public NpgsqlDataSource Source { get; } = new NpgsqlDataSourceBuilder(connStr).EnableDynamicJson().ConfigureJsonOptions(_jso).Build();
+	public NpgsqlDataSource Source { get; }
 
 	/// <summary>Užklausos nutraukimo laikas</summary>
 	public int Timeout { get; set; } = 30;
@@ -26,6 +26,17 @@ public class DB(string connStr) {
 	public bool Debug { get; set; }
 	/// <summary>Print query numbering</summary>
 	public long DebugIncr { get; set; }
+
+	/// <summary></summary><param name="connStr"></param>
+	public DB(string connStr) {
+		Source = new NpgsqlDataSourceBuilder(connStr).EnableDynamicJson().ConfigureJsonOptions(_jso).Build();
+	}
+	
+	/// <summary></summary><param name="connStr"></param><param name="build"></param>
+	public DB(string connStr, Action<NpgsqlDataSourceBuilder> build) {
+		var bld = new NpgsqlDataSourceBuilder(connStr).EnableDynamicJson().ConfigureJsonOptions(_jso);
+		build(bld); Source = bld.Build();
+	}
 
 
 	private readonly ConcurrentDictionary<string, (int num, DateTime tmo)> Counts = [];
