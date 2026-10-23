@@ -137,6 +137,29 @@ public class DBPaging<T>(string table, DB? db = null) where T : new() {
 		await wrt.WriteAsync(Encoding.UTF8.GetBytes($"],\"items\":{incr}}}"));
 	}
 
+	/// <summary>Atiduoti JSON rezultatą</summary>
+	/// <param name="wrt"></param>
+	/// <returns></returns>
+	public async Task WriteJsonArray(Stream wrt) {
+		(string qry, Dictionary<string, object?> param, int cnt) = await Prep();
+		using var db = new DBRead(qry, param);
+		await using var rdr = await db.GetReader();
+		var buff = new object[rdr.FieldCount];
+		var fields = new string[rdr.FieldCount];
+		for (int i = 0; i < rdr.FieldCount; i++) fields[i] = rdr.GetName(i);
+		await wrt.WriteAsync(Encoding.UTF8.GetBytes($"{{\"page\":{Page},\"total\":{cnt},\"fields\":{JsonSerializer.SerializeToUtf8Bytes(fields, JsonOptions)},\"data\":["));
+		byte[] comma = [(byte)',']; var iscomma = false; var incr = 0;
+		while (await rdr.ReadAsync()) {
+			if (iscomma) await wrt.WriteAsync(Encoding.UTF8.GetBytes(","));
+			else iscomma = true; incr++; rdr.GetValues(buff);
+			await wrt.WriteAsync(JsonSerializer.SerializeToUtf8Bytes(buff, JsonOptions));
+		}
+		await wrt.WriteAsync(Encoding.UTF8.GetBytes($"],\"items\":{incr}}}"));
+	}
+
+
+
+
 
 	/// <summary>Atiduoti JSON rezultatą</summary>
 	/// <param name="wrt"></param>
