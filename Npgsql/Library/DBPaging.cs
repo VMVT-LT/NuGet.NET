@@ -58,7 +58,7 @@ public class DBPaging<T>(string table, DB? db = null) where T : new() {
 		var whr = new List<string>(); if (!string.IsNullOrEmpty(WhereAdd)) whr.Add(WhereAdd);
 		if (Where is not null) {
 			foreach (var i in typeof(T).GetProperties()) {
-				var n = i.Name;
+				var n = ((i.GetCustomAttributes(typeof(DbField), true).FirstOrDefault() as DbField)?.Name ?? i.Name);
 				var pv = i.GetValue(Where);
 				if (pv is not null) {
 					if (!Fields.Contains(n)) { throw new Exception($"Invalid search field '{n}'"); }
@@ -133,6 +133,7 @@ public class DBPaging<T>(string table, DB? db = null) where T : new() {
 			else iscomma = true; incr++;
 			if (jsf) await wrt.WriteAsync(await rdr.GetFieldValueAsync<byte[]>(jsfi));
 			else await wrt.WriteAsync(JsonSerializer.SerializeToUtf8Bytes(await rdr.GetObject<T>(props), JsonOptions));
+			if (incr % 100 == 0) { await wrt.FlushAsync(); }
 		}
 		await wrt.WriteAsync(Encoding.UTF8.GetBytes($"],\"items\":{incr}}}"));
 	}
@@ -144,19 +145,25 @@ public class DBPaging<T>(string table, DB? db = null) where T : new() {
 		(string qry, Dictionary<string, object?> param, int cnt) = await Prep();
 		using var db = new DBRead(qry, param);
 		await using var rdr = await db.GetReader();
-		var buff = new object[rdr.FieldCount];
-		var fields = new string[rdr.FieldCount];
-		for (int i = 0; i < rdr.FieldCount; i++) fields[i] = rdr.GetName(i);
-		await wrt.WriteAsync(Encoding.UTF8.GetBytes($"{{\"page\":{Page},\"total\":{cnt},\"fields\":{JsonSerializer.SerializeToUtf8Bytes(fields, JsonOptions)},\"data\":["));
+		var (buff, fields) = GetFields(rdr);
+		await wrt.WriteAsync(Encoding.UTF8.GetBytes($"{{\"page\":{Page},\"total\":{cnt},\"fields\":"));
+		await wrt.WriteAsync(JsonSerializer.SerializeToUtf8Bytes(fields, JsonOptions));
+		await wrt.WriteAsync(Encoding.UTF8.GetBytes(",\"data\":["));
 		byte[] comma = [(byte)',']; var iscomma = false; var incr = 0;
 		while (await rdr.ReadAsync()) {
 			if (iscomma) await wrt.WriteAsync(Encoding.UTF8.GetBytes(","));
 			else iscomma = true; incr++; rdr.GetValues(buff);
 			await wrt.WriteAsync(JsonSerializer.SerializeToUtf8Bytes(buff, JsonOptions));
+			if (incr % 100 == 0) { await wrt.FlushAsync(); }
 		}
 		await wrt.WriteAsync(Encoding.UTF8.GetBytes($"],\"items\":{incr}}}"));
 	}
 
+	private static (object[], string[]) GetFields(NpgsqlDataReader rdr) {
+		var cnt = rdr.FieldCount; var fields = new string[cnt];
+		for (int i = 0; i < cnt; i++) fields[i] = rdr.GetName(i);
+		return new(new object[cnt], fields);
+	}
 
 
 
@@ -222,4 +229,13 @@ public class DBPagingResponse<T> {
 	public int Page { get; set; }
 	/// <summary>Duomenys</summary>
 	public List<T> Data { get; set; } = [];
+}
+
+/// <summary>Duomenų puslapiavimo užklausa</summary>
+/// <typeparam name="T"></typeparam>
+public class DBPagingArrayResponse<T> : DBPagingResponse<T> {
+	/// <summary>Duomenų laukai</summary>
+	public string[]? Fields { get; set; }
+	/// <summary>Duomenys</summary>
+	public new List<string[]> Data { get; set; } = [];
 }

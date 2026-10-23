@@ -2,7 +2,9 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using System.Collections.Concurrent;
 using System.Globalization;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -196,6 +198,31 @@ public static partial class Extensions {
 		return rhb;
 	}
 
+	private static readonly ConcurrentDictionary<Type, PropertyInfo[]> _propCache = new();
+	private static readonly ConcurrentDictionary<(Type Type, string PropName), Action<object, HttpContext>?> _paramCache = new();
+	/// <summary>Sukurti objektą iš gautų parametrų</summary>
+	/// <typeparam name="T">Objekto tipas</typeparam>
+	/// <param name="ctx"></param><returns></returns>
+	public static T FillParams<T>(this HttpContext ctx) where T : new() {
+		var ret = new T(); var type = typeof(T);
+		var prop = _propCache.GetOrAdd(type, t => [.. t.GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(p => p.CanWrite)]);
+		foreach (var pi in prop) {
+			var propName = pi.Name;
+			_paramCache.GetOrAdd((type, propName), key => {
+				var pi = key.Type.GetProperty(key.PropName, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
+				if (pi == null || !pi.CanWrite) return null;
+				return pi.PropertyType switch {
+					var t when t == typeof(int) || t == typeof(int?) => (o, c) => pi.SetValue(o, c.ParamIntN(key.PropName)),
+					var t when t == typeof(long) || t == typeof(long?) => (o, c) => pi.SetValue(o, c.ParamLongN(key.PropName)),
+					var t when t == typeof(DateOnly) || t == typeof(DateOnly?) => (o, c) => pi.SetValue(o, c.ParamDateN(key.PropName)),
+					var t when t == typeof(bool) || t == typeof(bool?) => (o, c) => pi.SetValue(o, c.ParamTrue(key.PropName)),
+					var t when t == typeof(string) => (o, c) => pi.SetValue(o, c.ParamStringN(key.PropName)),
+					_ => null
+				};
+			})?.Invoke(ret, ctx);
+		}
+		return ret;
+	}
 }
 
 
