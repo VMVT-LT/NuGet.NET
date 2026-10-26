@@ -56,7 +56,7 @@ public class RouteApi {
 	public List<string>? AllowCors { get; set; }
 
 	/// <summary>Json nustatymai</summary>
-	public static JsonSerializerOptions JsonOpts { get; private set; } = new();
+	public JsonSerializerOptions JsonOpts { get; private set; } = new();
 
 	/// <summary>Build minimal API app</summary>
 	/// <param name="build">Perform builder configuration</param>
