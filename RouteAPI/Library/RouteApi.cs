@@ -5,8 +5,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using System.Diagnostics.Eventing.Reader;
 using System.Reflection;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Vmvt.RouteAPI;
@@ -55,6 +55,8 @@ public class RouteApi {
 	/// <summary>Leisti naudotis API iš kitų puslapių</summary>
 	public List<string>? AllowCors { get; set; }
 
+	/// <summary>Json nustatymai</summary>
+	public static JsonSerializerOptions JsonOpts { get; private set; } = new();
 
 	/// <summary>Build minimal API app</summary>
 	/// <param name="build">Perform builder configuration</param>
@@ -81,7 +83,7 @@ public class RouteApi {
 		builder.Services.AddSwagger(Endpoints);
 
 		builder.Services.ConfigureHttpJsonOptions(a => {
-			var so = a.SerializerOptions; 
+			var so = JsonOpts = a.SerializerOptions;
 			so.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
 			so.WriteIndented = false;
 			so.Converters.Add(new CustomDateTimeConverter());

@@ -215,7 +215,7 @@ public static partial class Extensions {
 					var t when t == typeof(int) || t == typeof(int?) => (o, c) => pi.SetValue(o, c.ParamIntN(key.PropName)),
 					var t when t == typeof(long) || t == typeof(long?) => (o, c) => pi.SetValue(o, c.ParamLongN(key.PropName)),
 					var t when t == typeof(DateOnly) || t == typeof(DateOnly?) => (o, c) => pi.SetValue(o, c.ParamDateN(key.PropName)),
-					var t when t == typeof(bool) || t == typeof(bool?) => (o, c) => pi.SetValue(o, c.ParamTrue(key.PropName)),
+					var t when t == typeof(bool) || t == typeof(bool?) => (o, c) => pi.SetValue(o, c.ParamNull(key.PropName) ? null : c.ParamTrue(key.PropName)),
 					var t when t == typeof(string) => (o, c) => pi.SetValue(o, c.ParamStringN(key.PropName)),
 					_ => null
 				};
