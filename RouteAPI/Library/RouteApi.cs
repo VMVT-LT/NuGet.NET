@@ -21,7 +21,9 @@ public class RouteApi {
 
 	/// <summary></summary>
 	/// <param name="route">Maršrutai</param>
-	public RouteApi(params RouteDefinition[] route) { Endpoints.AddRange(route); }
+	public RouteApi(params RouteDefinition[] route) { 
+		Endpoints.AddRange(route); JsonInit();
+	}
 
 
 	private const string RouteNamespace = "Vmvt.RouteAPI.Modules";
@@ -50,13 +52,22 @@ public class RouteApi {
 			return new RouteDefinition(grp.Name) { Description = grp.Description, Version = grp.Version, Tag = grp.Tag, Routes = lst };
 		}).ToList().OrderBy(x => x.Tag);
 		Endpoints.AddRange(lst);
+		JsonInit();
 	}
 
 	/// <summary>Leisti naudotis API iš kitų puslapių</summary>
 	public List<string>? AllowCors { get; set; }
 
 	/// <summary>Json nustatymai</summary>
-	public JsonSerializerOptions JsonOpts { get; private set; } = new();
+	public JsonSerializerOptions JsonOpts { get; } = new() { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull, WriteIndented=false };
+
+	private void JsonInit() {
+		var c = JsonOpts.Converters;
+		c.Clear();
+		c.Add(new CustomDateTimeConverter());
+		c.Add(new CustomIntStringTupleConverter());
+		c.Add(new JsonStringEnumConverter());
+	}
 
 	/// <summary>Build minimal API app</summary>
 	/// <param name="build">Perform builder configuration</param>
@@ -82,14 +93,9 @@ public class RouteApi {
 
 		builder.Services.AddSwagger(Endpoints);
 
-		builder.Services.ConfigureHttpJsonOptions(a => {
-			var so = JsonOpts = a.SerializerOptions;
-			so.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
-			so.WriteIndented = false;
-			so.Converters.Add(new CustomDateTimeConverter());
-			so.Converters.Add(new CustomIntStringTupleConverter());
-			so.Converters.Add(new JsonStringEnumConverter());
-		});
+
+
+		builder.Services.ConfigureHttpJsonOptions(a => { JsonOpts.CopyTo(a.SerializerOptions); });
 
 		if (build is not null) build(builder);
 
@@ -151,5 +157,7 @@ public class RouteApi {
 		else if (StatusHandler is not null) await StatusHandler(ctx, ctx.GetError());
 
 	}
+
+
 }
 

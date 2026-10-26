@@ -223,6 +223,17 @@ public static partial class Extensions {
 		}
 		return ret;
 	}
+
+	/// <summary>JsonOpts parametrų kopijavimas</summary>
+	/// <param name="source"></param>
+	/// <param name="target"></param>
+	public static void CopyTo(this JsonSerializerOptions source, JsonSerializerOptions target) {
+		foreach (var prop in typeof(JsonSerializerOptions).GetProperties(BindingFlags.Public | BindingFlags.Instance)) {
+			if (prop.CanRead && prop.CanWrite) { prop.SetValue(target, prop.GetValue(source)); }
+		}
+		var c = target.Converters; c.Clear();
+		foreach (var i in source.Converters) { c.Add(i); }
+	}
 }
 
 
