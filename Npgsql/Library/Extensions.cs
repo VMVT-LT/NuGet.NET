@@ -8,7 +8,6 @@ namespace Vmvt.Npgsql;
 
 /// <summary>Plėtiniai</summary>
 public static class Extensions {
-	private static readonly JsonSerializerOptions JsonOpts = new() { PropertyNameCaseInsensitive = true };
 	/// <summary>Gauti tekstinę reikšmę</summary>
 	/// <param name="rdr"></param><param name="id"></param><returns></returns>
 	public static string? GetStringN(this NpgsqlDataReader rdr, int id) => !rdr.IsDBNull(id) ? rdr.GetString(id) : null;
@@ -86,9 +85,9 @@ public static class Extensions {
 					_ when i.SubType == typeof(DateTime) => rdr.GetFieldValue<List<DateTime>>(f),
 					_ when i.SubType == typeof(DateOnly) => rdr.GetFieldValue<List<DateOnly>>(f),
 					_ when i.SubType == typeof(Guid) => rdr.GetFieldValue<List<Guid>>(f),
-					_ => i.FieldType == "jsonb" ? JsonSerializer.Deserialize(rdr.GetString(f), i.Type, JsonOpts) : rdr.GetValue(f)
+					_ => i.FieldType == "jsonb" ? JsonSerializer.Deserialize(rdr.GetString(f), i.Type, DBConfig.JsonOpts) : rdr.GetValue(f)
 				},
-				_ when i.Type.IsClass && i.FieldType == "jsonb" => JsonSerializer.Deserialize(rdr.GetString(f), i.Type, JsonOpts),
+				_ when i.Type.IsClass && i.FieldType == "jsonb" => JsonSerializer.Deserialize(rdr.GetString(f), i.Type, DBConfig.JsonOpts),
 				_ => rdr.GetValue(f)
 			};
 			if (val is not null) i.Setter(t, val);
@@ -108,7 +107,7 @@ public static class Extensions {
 		if (!rdr.IsOnRow) if (!await rdr.ReadAsync(ct)) return default;
 		if (!await rdr.IsDBNullAsync(field, ct)) {
 			var str = rdr.GetString(field);
-			return JsonSerializer.Deserialize<T>(str, jso ?? JsonOpts);
+			return JsonSerializer.Deserialize<T>(str, jso ?? DBConfig.JsonOpts);
 		}
 		return default;
 	}

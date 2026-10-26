@@ -33,7 +33,7 @@ public static partial class Extensions {
 				foreach (var k in j.Routes) {
 					var m = app.Attach(k); eps++;
 					if (k.Filter is not null) m.AddEndpointFilter(k.Filter);
-					
+
 
 #if DEBUG //Disable Swagger
 					m.Produces(k.Status, k.Response)
@@ -229,13 +229,26 @@ public static partial class Extensions {
 	/// <param name="target"></param>
 	public static void CopyTo(this JsonSerializerOptions source, JsonSerializerOptions target) {
 		foreach (var prop in typeof(JsonSerializerOptions).GetProperties(BindingFlags.Public | BindingFlags.Instance)) {
-			if (prop.CanRead && prop.CanWrite) { prop.SetValue(target, prop.GetValue(source)); }
+			if (!prop.CanRead || !prop.CanWrite) continue;
+
+			var value = prop.GetValue(source);
+
+			// Do not overwrite required resolvers with null
+			if ((prop.Name == nameof(JsonSerializerOptions.TypeInfoResolver) ||
+				 prop.Name == nameof(JsonSerializerOptions.TypeInfoResolverChain)) && value == null) {
+				continue;
+			}
+
+			prop.SetValue(target, value);
 		}
-		var c = target.Converters; c.Clear();
-		foreach (var i in source.Converters) { c.Add(i); }
+
+		target.Converters.Clear();
+		foreach (var converter in source.Converters) {
+			target.Converters.Add(converter);
+		}
+
 	}
 }
-
 
 /// <summary>Datos formatavimas</summary>
 public class CustomDateTimeConverter : JsonConverter<DateTime> {

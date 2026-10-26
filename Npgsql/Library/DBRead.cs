@@ -144,7 +144,7 @@ public class DBRead : IDisposable {
 	public void AddParam(string key, object? value, NpgsqlDbType type) => Cmd.Parameters.Add(new(key, type) { Value = value ?? DBNull.Value });
 	/// <summary>Pridėti Jsonb tipo parametrą</summary><param name="key"></param><param name="value"></param><param name="opts"></param>
 	public void AddJsonb(string key, object? value, JsonSerializerOptions? opts = null) => Cmd.Parameters.Add(new(key, NpgsqlDbType.Jsonb) {
-		Value = value is null ? DBNull.Value : JsonSerializer.Serialize(value, opts)
+		Value = value is null ? DBNull.Value : JsonSerializer.Serialize(value, opts??DBConfig.JsonOpts)
 	});
 	/// <summary>Pridėti Jsonb tipo parametrą su klaidos reikšme</summary><param name="key"></param><param name="value"></param>
 	public void AddJsonbError(string key, object? value) => Cmd.Parameters.Add(new(key, NpgsqlDbType.Jsonb) {

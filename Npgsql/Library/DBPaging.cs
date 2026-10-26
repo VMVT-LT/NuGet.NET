@@ -107,7 +107,7 @@ public class DBPaging<T>(string table, DB? db = null) where T : new() {
 		var jsf = jsfi >= 0;
 
 		while (await rdr.ReadAsync()) {
-			var itm = jsf ? await rdr.GetJsonbObject<T>(jsfi,JsonOptions) : await rdr.GetObject<T>(props);
+			var itm = jsf ? await rdr.GetJsonbObject<T>(jsfi,JsonOptions ?? DBConfig.JsonOpts) : await rdr.GetObject<T>(props);
 			//TODO: Sleep;
 			if (itm is not null) ret.Data.Add(itm);
 		}
@@ -132,7 +132,7 @@ public class DBPaging<T>(string table, DB? db = null) where T : new() {
 			if (iscomma) await wrt.WriteAsync(comma);
 			else iscomma = true; incr++;
 			if (jsf) await wrt.WriteAsync(await rdr.GetFieldValueAsync<byte[]>(jsfi));
-			else await wrt.WriteAsync(JsonSerializer.SerializeToUtf8Bytes(await rdr.GetObject<T>(props), JsonOptions));
+			else await wrt.WriteAsync(JsonSerializer.SerializeToUtf8Bytes(await rdr.GetObject<T>(props), JsonOptions ?? DBConfig.JsonOpts));
 			if (incr % 100 == 0) { await wrt.FlushAsync(); }
 		}
 		await wrt.WriteAsync(Encoding.UTF8.GetBytes($"],\"items\":{incr}}}"));
@@ -147,13 +147,13 @@ public class DBPaging<T>(string table, DB? db = null) where T : new() {
 		await using var rdr = await db.GetReader();
 		var (buff, fields) = GetFields(rdr);
 		await wrt.WriteAsync(Encoding.UTF8.GetBytes($"{{\"page\":{Page},\"total\":{cnt},\"fields\":"));
-		await wrt.WriteAsync(JsonSerializer.SerializeToUtf8Bytes(fields, JsonOptions));
+		await wrt.WriteAsync(JsonSerializer.SerializeToUtf8Bytes(fields, JsonOptions ?? DBConfig.JsonOpts));
 		await wrt.WriteAsync(Encoding.UTF8.GetBytes(",\"data\":["));
 		byte[] comma = [(byte)',']; var iscomma = false; var incr = 0;
 		while (await rdr.ReadAsync()) {
 			if (iscomma) await wrt.WriteAsync(Encoding.UTF8.GetBytes(","));
 			else iscomma = true; incr++; rdr.GetValues(buff);
-			await wrt.WriteAsync(JsonSerializer.SerializeToUtf8Bytes(buff, JsonOptions));
+			await wrt.WriteAsync(JsonSerializer.SerializeToUtf8Bytes(buff, JsonOptions ?? DBConfig.JsonOpts));
 			if (incr % 100 == 0) { await wrt.FlushAsync(); }
 		}
 		await wrt.WriteAsync(Encoding.UTF8.GetBytes($"],\"items\":{incr}}}"));

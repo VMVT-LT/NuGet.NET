@@ -37,7 +37,8 @@ public class DBConfig {
 		return ret;
 	}
 
-	private static readonly JsonSerializerOptions _jsonOptions = new() {
+	/// <summary>Json standartiniai nustatymai</summary>
+	public static JsonSerializerOptions JsonOpts = new() {
 		PropertyNameCaseInsensitive = true
 	};
 
@@ -67,10 +68,10 @@ public class DBConfig {
 				try {
 					object val;
 					if (value is string strVal && keyProp.PropertyType != typeof(string)) {
-						val = JsonSerializer.Deserialize(strVal, keyProp.PropertyType, _jsonOptions)!;
+						val = JsonSerializer.Deserialize(strVal, keyProp.PropertyType, JsonOpts)!;
 					}
 					else if (value is JsonElement jsonElement && keyProp.PropertyType != typeof(JsonElement)) {
-						val = jsonElement.Deserialize(keyProp.PropertyType, _jsonOptions)!;
+						val = jsonElement.Deserialize(keyProp.PropertyType, JsonOpts)!;
 					}
 					else {
 						var targetType = Nullable.GetUnderlyingType(keyProp.PropertyType) ?? keyProp.PropertyType;

@@ -6,10 +6,7 @@ namespace Vmvt.Npgsql;
 
 /// <summary>Duomenų bazės pagalbininkas</summary>
 /// <remarks>Inicijuoti naują prisijungimą</remarks>
-/// <param name="connStr">DB prisijungimo duomenys</param>
-public class DB {
-	private static readonly JsonSerializerOptions _jso = new() { PropertyNameCaseInsensitive = true };
-	
+public class DB {	
 	/// <summary>Standartinis DB prisijungimas</summary>
 	public static DB Default { get; set; } = new("User ID=postgres; Password=postgres; Server=localhost:5432; Database=postgres;");
 
@@ -29,12 +26,12 @@ public class DB {
 
 	/// <summary></summary><param name="connStr"></param>
 	public DB(string connStr) {
-		Source = new NpgsqlDataSourceBuilder(connStr).EnableDynamicJson().ConfigureJsonOptions(_jso).Build();
+		Source = new NpgsqlDataSourceBuilder(connStr).EnableDynamicJson().ConfigureJsonOptions(DBConfig.JsonOpts).Build();
 	}
 	
 	/// <summary></summary><param name="connStr"></param><param name="build"></param>
 	public DB(string connStr, Action<NpgsqlDataSourceBuilder> build) {
-		var bld = new NpgsqlDataSourceBuilder(connStr).EnableDynamicJson().ConfigureJsonOptions(_jso);
+		var bld = new NpgsqlDataSourceBuilder(connStr).EnableDynamicJson().ConfigureJsonOptions(DBConfig.JsonOpts);
 		build(bld); Source = bld.Build();
 	}
 

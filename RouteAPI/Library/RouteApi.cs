@@ -22,7 +22,7 @@ public class RouteApi {
 	/// <summary></summary>
 	/// <param name="route">Maršrutai</param>
 	public RouteApi(params RouteDefinition[] route) { 
-		Endpoints.AddRange(route); JsonInit();
+		Endpoints.AddRange(route);
 	}
 
 
@@ -52,22 +52,24 @@ public class RouteApi {
 			return new RouteDefinition(grp.Name) { Description = grp.Description, Version = grp.Version, Tag = grp.Tag, Routes = lst };
 		}).ToList().OrderBy(x => x.Tag);
 		Endpoints.AddRange(lst);
-		JsonInit();
 	}
 
 	/// <summary>Leisti naudotis API iš kitų puslapių</summary>
 	public List<string>? AllowCors { get; set; }
 
 	/// <summary>Json nustatymai</summary>
-	public JsonSerializerOptions JsonOpts { get; } = new() { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull, WriteIndented=false };
+	public JsonSerializerOptions JsonOpts { get {
+			var ret = new JsonSerializerOptions() { 
+				DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull, 
+				WriteIndented = false
+			}; 
+			var c = ret.Converters;
+			c.Add(new CustomDateTimeConverter());
+			c.Add(new CustomIntStringTupleConverter());
+			c.Add(new JsonStringEnumConverter());
+			return ret;
+		} }
 
-	private void JsonInit() {
-		var c = JsonOpts.Converters;
-		c.Clear();
-		c.Add(new CustomDateTimeConverter());
-		c.Add(new CustomIntStringTupleConverter());
-		c.Add(new JsonStringEnumConverter());
-	}
 
 	/// <summary>Build minimal API app</summary>
 	/// <param name="build">Perform builder configuration</param>
@@ -93,9 +95,7 @@ public class RouteApi {
 
 		builder.Services.AddSwagger(Endpoints);
 
-
-
-		builder.Services.ConfigureHttpJsonOptions(a => { JsonOpts.CopyTo(a.SerializerOptions); });
+		builder.Services.ConfigureHttpJsonOptions(a => JsonOpts.CopyTo(a.SerializerOptions));
 
 		if (build is not null) build(builder);
 
