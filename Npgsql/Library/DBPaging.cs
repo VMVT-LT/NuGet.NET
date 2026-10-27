@@ -61,9 +61,10 @@ public class DBPaging<T>(string table, DB? db = null) where T : new() {
 				var n = ((i.GetCustomAttributes(typeof(DbField), true).FirstOrDefault() as DbField)?.Name ?? i.Name);
 				var pv = i.GetValue(Where);
 				if (pv is not null) {
-					if (!Fields.Contains(n.ToLower(), StringComparer.OrdinalIgnoreCase)) { throw new Exception($"Invalid search field '{n}'"); }
-					if (i.PropertyType == typeof(int?) && (int)pv == -1) whr.Add($"\"{n}\" is null");
-					else { param[$"@{n}"] = pv; whr.Add($"\"{n}\"=@{n}"); }
+					var mf = Fields.FirstOrDefault(j => string.Equals(n, j, StringComparison.OrdinalIgnoreCase))
+						?? throw new Exception($"Invalid search field '{n}'");
+					if (i.PropertyType == typeof(int?) && (int)pv == -1) { whr.Add($"\"{mf}\" is null"); }
+					else { param[$"@{mf}"] = pv; whr.Add($"\"{mf}\"=@{mf}"); }
 				}
 			}
 		}
