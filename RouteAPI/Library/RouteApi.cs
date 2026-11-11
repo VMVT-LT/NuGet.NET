@@ -58,18 +58,19 @@ public class RouteApi {
 	public List<string>? AllowCors { get; set; }
 
 	/// <summary>Json nustatymai</summary>
-	public JsonSerializerOptions JsonOpts { get {
-			var ret = new JsonSerializerOptions() { 
-				DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull, 
-				WriteIndented = false
-			}; 
-			var c = ret.Converters;
-			c.Add(new CustomDateTimeConverter());
-			c.Add(new CustomIntStringTupleConverter());
-			c.Add(new JsonStringEnumConverter());
-			return ret;
-		} }
+	public JsonSerializerOptions? JsonOpts { get; set; }
 
+	private static JsonSerializerOptions NewJsonOpts() {
+		var ret = new JsonSerializerOptions() {
+			DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+			WriteIndented = false
+		};
+		var c = ret.Converters;
+		c.Add(new CustomDateTimeConverter());
+		c.Add(new CustomIntStringTupleConverter());
+		c.Add(new JsonStringEnumConverter());
+		return ret;
+	}
 
 	/// <summary>Build minimal API app</summary>
 	/// <param name="build">Perform builder configuration</param>
@@ -95,7 +96,7 @@ public class RouteApi {
 
 		builder.Services.AddSwagger(Endpoints);
 
-		builder.Services.ConfigureHttpJsonOptions(a => JsonOpts.CopyTo(a.SerializerOptions));
+		builder.Services.ConfigureHttpJsonOptions(a => (JsonOpts?? NewJsonOpts()).CopyTo(a.SerializerOptions));
 
 		if (build is not null) build(builder);
 
