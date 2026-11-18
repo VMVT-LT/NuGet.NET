@@ -26,6 +26,9 @@ public static class Extensions {
 	/// <summary>Gauti datos reikšmę</summary>
 	/// <param name="rdr"></param><param name="id"></param><returns></returns>
 	public static DateTime? GetDateTimeN(this NpgsqlDataReader rdr, int id) => !rdr.IsDBNull(id) ? rdr.GetDateTime(id) : null;
+	/// <summary>Gauti Taip/Ne reikšmę</summary>
+	/// <param name="rdr"></param><param name="id"></param><param name="_default"></param><returns></returns>
+	public static bool GetBool(this NpgsqlDataReader rdr, int id, bool _default = false) => !rdr.IsDBNull(id) ? rdr.GetBoolean(id) : _default;
 
 
 	/// <summary>Gauti visas įrašo reikšmes kaip objektų masyvą</summary>
