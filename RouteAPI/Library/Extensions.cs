@@ -42,6 +42,8 @@ public static partial class Extensions {
 						o.Tags = [new() { Name = j.Name }]; o.Deprecated = k.Deprecated ?? false;
 						if (k.Params is not null) foreach (var i in k.Params) o.Parameters.Add(i.GetParam()); return o;
 					}).WithMetadata(new EndpointGroupNameAttribute($"{i.Path}"));
+
+					if (k.ByteStream ?? false) m.Accepts<byte[]>("application/octet-stream");
 					if (k.Errors?.Count > 0) { m.Errors([.. k.Errors]); }
 #endif
 				}

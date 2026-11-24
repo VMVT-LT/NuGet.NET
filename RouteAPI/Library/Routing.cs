@@ -75,6 +75,8 @@ public class Route(string path, Delegate hnd, Method method = Method.Get) {
 	public List<int>? Errors { get; set; }
 	/// <summary></summary>
 	public bool? Deprecated { get; set; }
+	/// <summary>Binary data</summary>
+	public bool? ByteStream { get; set; }
 	/// <summary>Parametrai</summary>
 	[JsonIgnore] public List<RouteParam>? Params { get; set; }
 	/// <summary>Pagrindinė funkcija</summary>
