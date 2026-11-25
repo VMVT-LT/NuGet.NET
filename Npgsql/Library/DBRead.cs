@@ -142,6 +142,13 @@ public class DBRead : IDisposable {
 	public void AddParam(string key, object? value) => Cmd.Parameters.Add(new(key, value ?? DBNull.Value));
 	/// <summary>Pridėti parametrą su tipu</summary><param name="key"></param><param name="value"></param><param name="type"></param>
 	public void AddParam(string key, object? value, NpgsqlDbType type) => Cmd.Parameters.Add(new(key, type) { Value = value ?? DBNull.Value });
+	/// <summary>Pridėti standartinį parametrą</summary><typeparam name="T">Parametro tipas</typeparam><param name="key"></param><param name="value"></param>
+	public void AddParam<T>(string key, T? value) {
+		if (value is null) Cmd.Parameters.Add(new NpgsqlParameter(key, DBNull.Value));
+		else Cmd.Parameters.Add(new NpgsqlParameter<T>(key, value));
+	}
+
+
 	/// <summary>Pridėti Jsonb tipo parametrą</summary><param name="key"></param><param name="value"></param><param name="opts"></param>
 	public void AddJsonb(string key, object? value, JsonSerializerOptions? opts = null) => Cmd.Parameters.Add(new(key, NpgsqlDbType.Jsonb) {
 		Value = value is null ? DBNull.Value : JsonSerializer.Serialize(value, opts??DBConfig.JsonOpts)
