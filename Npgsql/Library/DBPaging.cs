@@ -93,22 +93,23 @@ public class DBPaging<T>(string table, DB? db = null) where T : new() {
 
 
 	/// <summary>Vykdyti užklausą</summary>
+	/// <param name="ct"></param>
 	/// <returns></returns>
-	public async Task<DBPagingResponse<T>> Execute() {
+	public async Task<DBPagingResponse<T>> Execute(CancellationToken ct = default) {
 		(string qry, Dictionary<string, object?> param, int cnt) = await Prep();
 
 		var ret = new DBPagingResponse<T>() { Total = Total ? cnt : 0, Page = Page };
 
 		using var db = new DBRead(qry, param, Db);
-		using var rdr = await db.GetReader();
+		using var rdr = await db.GetReader(ct);
 
 		var props = rdr.GetProps<T>();
 
 		var jsfi = !string.IsNullOrEmpty(JsonField) ? rdr.GetFieldId(JsonField) : -1;
 		var jsf = jsfi >= 0;
 
-		while (await rdr.ReadAsync()) {
-			var itm = jsf ? await rdr.GetJsonbObject<T>(jsfi,JsonOptions ?? DBConfig.JsonOpts) : await rdr.GetObject<T>(props);
+		while (await rdr.ReadAsync(ct)) {
+			var itm = jsf ? await rdr.GetJsonbObject<T>(jsfi, JsonOptions ?? DBConfig.JsonOpts, ct) : await rdr.GetObject<T>(props, ct);
 			//TODO: Sleep;
 			if (itm is not null) ret.Data.Add(itm);
 		}
@@ -118,46 +119,48 @@ public class DBPaging<T>(string table, DB? db = null) where T : new() {
 
 	/// <summary>Atiduoti JSON rezultatą</summary>
 	/// <param name="wrt"></param>
+	/// <param name="ct"></param>
 	/// <returns></returns>
-	public async Task WriteJson(Stream wrt) {
+	public async Task WriteJson(Stream wrt, CancellationToken ct = default) {
 		(string qry, Dictionary<string, object?> param, int cnt) = await Prep();
-		using var db = new DBRead(qry, param);
-		await using var rdr = await db.GetReader();
+		using var db = new DBRead(qry, param, Db);
+		await using var rdr = await db.GetReader(ct);
 		var props = rdr.GetProps<T>();
 		byte[] comma = [(byte)','];
 		var iscomma = false; var incr = 0;
 		var jsfi = !string.IsNullOrEmpty(JsonField) ? rdr.GetFieldId(JsonField) : -1;
 		var jsf = jsfi >= 0;
-		await wrt.WriteAsync(Encoding.UTF8.GetBytes($"{{\"page\":{Page},\"total\":{cnt},\"data\":["));
-		while (await rdr.ReadAsync()) {
-			if (iscomma) await wrt.WriteAsync(comma);
+		await wrt.WriteAsync(Encoding.UTF8.GetBytes($"{{\"page\":{Page},\"total\":{cnt},\"data\":["), ct);
+		while (await rdr.ReadAsync(ct)) {
+			if (iscomma) await wrt.WriteAsync(comma, ct);
 			else iscomma = true; incr++;
-			if (jsf) await wrt.WriteAsync(await rdr.GetFieldValueAsync<byte[]>(jsfi));
-			else await wrt.WriteAsync(JsonSerializer.SerializeToUtf8Bytes(await rdr.GetObject<T>(props), JsonOptions ?? DBConfig.JsonOpts));
-			if (incr % 100 == 0) { await wrt.FlushAsync(); }
+			if (jsf) await wrt.WriteAsync(await rdr.GetFieldValueAsync<byte[]>(jsfi, ct), ct);
+			else await wrt.WriteAsync(JsonSerializer.SerializeToUtf8Bytes(await rdr.GetObject<T>(props, ct), JsonOptions ?? DBConfig.JsonOpts), ct);
+			if (incr % 100 == 0) { await wrt.FlushAsync(ct); }
 		}
-		await wrt.WriteAsync(Encoding.UTF8.GetBytes($"],\"items\":{incr}}}"));
+		await wrt.WriteAsync(Encoding.UTF8.GetBytes($"],\"items\":{incr}}}"), ct);
 	}
 
 	/// <summary>Atiduoti JSON rezultatą</summary>
 	/// <param name="wrt"></param>
+	/// <param name="ct"></param>
 	/// <returns></returns>
-	public async Task WriteJsonArray(Stream wrt) {
+	public async Task WriteJsonArray(Stream wrt, CancellationToken ct = default) {
 		(string qry, Dictionary<string, object?> param, int cnt) = await Prep();
-		using var db = new DBRead(qry, param);
-		await using var rdr = await db.GetReader();
+		using var db = new DBRead(qry, param, Db);
+		await using var rdr = await db.GetReader(ct);
 		var (buff, fields) = GetFields(rdr);
-		await wrt.WriteAsync(Encoding.UTF8.GetBytes($"{{\"page\":{Page},\"total\":{cnt},\"fields\":"));
-		await wrt.WriteAsync(JsonSerializer.SerializeToUtf8Bytes(fields, JsonOptions ?? DBConfig.JsonOpts));
-		await wrt.WriteAsync(Encoding.UTF8.GetBytes(",\"data\":["));
+		await wrt.WriteAsync(Encoding.UTF8.GetBytes($"{{\"page\":{Page},\"total\":{cnt},\"fields\":"), ct);
+		await wrt.WriteAsync(JsonSerializer.SerializeToUtf8Bytes(fields, JsonOptions ?? DBConfig.JsonOpts), ct);
+		await wrt.WriteAsync(Encoding.UTF8.GetBytes(",\"data\":["), ct);
 		byte[] comma = [(byte)',']; var iscomma = false; var incr = 0;
-		while (await rdr.ReadAsync()) {
-			if (iscomma) await wrt.WriteAsync(Encoding.UTF8.GetBytes(","));
+		while (await rdr.ReadAsync(ct)) {
+			if (iscomma) await wrt.WriteAsync(Encoding.UTF8.GetBytes(","), ct);
 			else iscomma = true; incr++; rdr.GetValues(buff);
-			await wrt.WriteAsync(JsonSerializer.SerializeToUtf8Bytes(buff, JsonOptions ?? DBConfig.JsonOpts));
-			if (incr % 100 == 0) { await wrt.FlushAsync(); }
+			await wrt.WriteAsync(JsonSerializer.SerializeToUtf8Bytes(buff, JsonOptions ?? DBConfig.JsonOpts), ct);
+			if (incr % 100 == 0) { await wrt.FlushAsync(ct); }
 		}
-		await wrt.WriteAsync(Encoding.UTF8.GetBytes($"],\"items\":{incr}}}"));
+		await wrt.WriteAsync(Encoding.UTF8.GetBytes($"],\"items\":{incr}}}"), ct);
 	}
 
 	private static (object[], string[]) GetFields(NpgsqlDataReader rdr) {

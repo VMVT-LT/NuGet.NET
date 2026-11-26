@@ -47,14 +47,17 @@ public class DB {
 	public async Task<int> GetCount(string table, string? where, Dictionary<string, object?>? param = null) {
 		var qry = $"{table}{where}";
 		if (param?.Count > 0) foreach (var i in param) qry += i.Value?.ToString();
-		if (Counts.TryGetValue(qry, out var cnt)) {
-			var now = DateTime.UtcNow;
-			if (cnt.tmo > now) return cnt.num;
-			else if (CountClean < now) {
-				CountClean.AddSeconds(CountReset * 2);
-				foreach (var i in Counts) if (i.Value.tmo < now) Counts.TryRemove(i.Key, out _);
+		var now = DateTime.UtcNow;
+		if (Counts.TryGetValue(qry, out var cnt) && cnt.tmo > now) return cnt.num;
+		
+		if (Counts.Count > 5000) { Counts.Clear(); }
+		else if (CountClean < now) {
+			CountClean = now.AddSeconds(CountReset * 2); 
+			foreach (var i in Counts) {
+				if (i.Value.tmo < now) Counts.TryRemove(i.Key, out _);
 			}
 		}
+
 		using var db = new DBRead($"SELECT count(*) FROM {table}{where};", param, this) { Timeout = Timeout };
 		await using var rdr = await db.GetReader();
 		if (await rdr.ReadAsync()) return (Counts[qry] = (rdr.GetInt32(0), DateTime.UtcNow.AddSeconds(CountReset))).num;

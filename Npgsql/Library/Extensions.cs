@@ -1,4 +1,5 @@
 ﻿using Npgsql;
+using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -40,19 +41,23 @@ public static class Extensions {
 		return row;
 	}
 
+		private static readonly ConcurrentDictionary<Type, PropertyInfo[]> PropertyCache = [];
+
 	/// <summary>Gauti objekto klasės parametrų informaciją</summary>
 	/// <typeparam name="T">Objekto klasė</typeparam>
 	/// <param name="rdr">SQL duomenų skaitytuvas</param>
 	/// <returns>Parametrų sąrašas</returns>
 	public static DBReadPropInfo[] GetProps<T>(this NpgsqlDataReader rdr) {
+		var lst = new Dictionary<string, PropertyInfo>(StringComparer.OrdinalIgnoreCase);
+		foreach (var i in PropertyCache.GetOrAdd(typeof(T), t => t.GetProperties())) {
+			lst[((i.GetCustomAttributes(typeof(DbField), true).FirstOrDefault() as DbField)?.Name ?? i.Name).ToLower()] = i;
+		}
+
 		var ret = new List<DBReadPropInfo>();
-		var prp = typeof(T).GetProperties();
-		var lst = new Dictionary<string, PropertyInfo>();
-		foreach (var i in prp) lst[((i.GetCustomAttributes(typeof(DbField), true).FirstOrDefault() as DbField)?.Name ?? i.Name).ToLower()] = i;
 		var cnt = rdr.FieldCount;
 		for (var i = 0; i < cnt; i++) {
 			var name = rdr.GetName(i);
-			if (lst.TryGetValue(name.ToLower(), out var nm))
+			if (lst.TryGetValue(name, out var nm))
 				ret.Add(new(nm) { FieldId = i, FieldName = name, FieldType = rdr.GetDataTypeName(i) });
 		}
 		return [.. ret];

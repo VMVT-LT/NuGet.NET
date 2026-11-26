@@ -73,7 +73,7 @@ public class DBRead : IDisposable {
 		if (PrintQuery) Print(); Cmd.CommandTimeout = Timeout;
 		var ret = await Cmd.ExecuteScalarAsync(ct);
 		if (ret == null || ret == DBNull.Value) return default;
-		try { return (T)ret; } catch (Exception) { throw; }
+		return (T)ret;
 	}
 
 	/// <summary>Gauti objektą iš duomenų bazės pirmo įrašo</summary>
@@ -181,7 +181,7 @@ public class DBRead : IDisposable {
 			if (disposing) {
 				try {
 					Cmd.Dispose();
-				} catch (Exception ex) { Console.WriteLine($"[SQLError{Db.DebugIncr}] Dispose - {ex.Message}\n{ex.StackTrace}"); }
+				} catch (Exception ex) { if(Db.Debug) Console.WriteLine($"[SQLError{Db.DebugIncr}] Dispose - {ex.Message}\n{ex.StackTrace}"); }
 			}
 			IsDisposed = true;
 		}
