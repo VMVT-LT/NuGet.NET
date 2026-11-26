@@ -25,27 +25,32 @@ public class LdapAuth(EntraCfgLdap cfg) {
 					ret = await GetUser(conn, Config.BaseDN, conn.AuthenticationDn, Config.UserSelect);
 				}
 				else throw new EntraException(281, "Ldap.Login", "Vartotojas neatpažintas");
-			} catch (LdapException ex) {
+			}
+			catch (LdapException ex) {
 				throw ex.ResultCode switch {
 					49 => new EntraException(282, "Ldap.Login", "Neteisingi prisijungimo duomenys", ex),
 					32 => new EntraException(283, "Ldap.Login", "Vartotojas nerastas", ex),
 					_ => new EntraException(284, "Ldap.Login", ex.Message, ex),
 				};
-			} finally { conn.Disconnect(); }
+			}
+			finally { conn.Disconnect(); }
 
-			if (ret is null) 
-					throw new EntraException(285, "Ldap.Login", "Prisijungimas negalimas");
+			if (ret is null)
+				throw new EntraException(285, "Ldap.Login", "Prisijungimas negalimas");
 			return ret;
-		} catch (EntraException) { throw; } catch (Exception ex) {
+		}
+		catch (EntraException) { throw; }
+		catch (Exception ex) {
 			throw new EntraException(286, "Ldap.Login", ex.Message, ex);
 		}
 	}
 
 	private async Task<LdapUser> GetUser(LdapConnection conn, string dn, string? upn = null, string[]? attr = null) {
 		try {
+			var escapedUpn = EscapeLdapFilterValue(upn);
 			var srh = await conn.SearchAsync(dn,
 				upn is null ? LdapConnection.ScopeBase : LdapConnection.ScopeSub,
-				upn is null ? "(objectClass=*)" : $"({Config.Search}={upn})",
+				upn is null ? "(objectClass=*)" : $"({Config.Search}={escapedUpn})",
 				attr ?? Config.UserDefault, false
 			);
 
@@ -54,7 +59,9 @@ public class LdapAuth(EntraCfgLdap cfg) {
 
 			var usr = await srh.NextAsync();
 			return await MapEntry<LdapUser>(conn, usr);
-		} catch (EntraException) { throw; } catch (Exception ex) {
+		}
+		catch (EntraException) { throw; }
+		catch (Exception ex) {
 			throw new EntraException(288, "Ldap.User", ex.Message, ex);
 		}
 	}
@@ -79,7 +86,8 @@ public class LdapAuth(EntraCfgLdap cfg) {
 				}
 			}
 			return ret;
-		} catch (Exception ex) {
+		}
+		catch (Exception ex) {
 			throw new EntraException(289, "Ldap.Entry", ex.Message, ex);
 		}
 	}
@@ -103,6 +111,11 @@ public class LdapAuth(EntraCfgLdap cfg) {
 	<button type=""submit"">Prisijungti</button><input type=""hidden"" name=""state"" value=""{state}"">
 <p><b>Dėmesio</b>: Šis prisijungimas yra pagalbinis, esant klausimams kreipkitės į IT skyrių.</p>
 </form></body></html>";
+
+	private static string EscapeLdapFilterValue(string? value) {
+		if (string.IsNullOrEmpty(value)) return string.Empty;
+		return value.Replace("\\", "\\5c").Replace("*", "\\2a").Replace("(", "\\28").Replace(")", "\\29").Replace("\0", "\\00");
+	}
 }
 
 

@@ -152,8 +152,8 @@ public class EntraAuth {
 		return $"{AuthRedirect}&state={auth.ID}{prompt?.ToPrompt()}";
 	}
 
-	private void CleanAuth() { var now = DateTime.UtcNow; if (NextAuthClean > DateTime.UtcNow) { NextAuthClean = now.AddSeconds(Config.Lock.CleanInterval); foreach (var i in AuthList) if (i.Value.Timeout < now) AuthList.TryRemove(i.Key, out _); } }
-	private void CleanLdap() { var now = DateTime.UtcNow; if (NextLdapClean > DateTime.UtcNow) { NextLdapClean = now.AddSeconds(Config.Lock.CleanInterval); foreach (var i in LdapList) if (i.Value.Timeout < now) LdapList.TryRemove(i.Key, out _); } }
+	private void CleanAuth() { var now = DateTime.UtcNow; if (NextAuthClean < now) { NextAuthClean = now.AddSeconds(Config.Lock.CleanInterval); foreach (var i in AuthList) if (i.Value.Timeout < now) AuthList.TryRemove(i.Key, out _); } }
+	private void CleanLdap() { var now = DateTime.UtcNow; if (NextLdapClean < now) { NextLdapClean = now.AddSeconds(Config.Lock.CleanInterval); foreach (var i in LdapList) if (i.Value.Timeout < now) LdapList.TryRemove(i.Key, out _); } }
 
 	/// <summary>Autorizacijos procesas</summary>
 	/// <param name="ctx">Vartotojo užklausa su formos parametrais</param>
@@ -380,13 +380,14 @@ public class EntraAuth {
 		try {
 			sess.Session.Extend = sess.Session.Expire = DateTime.UtcNow.AddSeconds(10); //pratęsti atnaujinimą
 			Task.Run(async () => { // Atidėdi senos sessijos pašalinimą
-				await Task.Delay(8000); SessionList.TryRemove(sess.SSID, out _);
-				if (Config.SessionHandler is not null)
-					try {
-						Config.SessionHandler(SessionLogType.Remove, sess).Wait();
-					} catch (Exception ex) {
-						throw new EntraException(264, "Entra.Session", "Nepavyko pratęsti sesijos", ex);
+				try {
+					await Task.Delay(8000); SessionList.TryRemove(sess.SSID, out _);
+					if (Config.SessionHandler is not null) {
+						await Config.SessionHandler(SessionLogType.Remove, sess);
 					}
+				} catch (Exception ex) {
+					Console.WriteLine($"Background Session Removal Error: {ex.Message}");
+				}
 			});
 			var ret = new UserSession() {
 				User = sess.User, Manager = sess.Manager, Groups = sess.Groups, Roles = sess.Roles,
@@ -409,14 +410,19 @@ public class EntraAuth {
 	private void CleanSessions(bool force = true) {
 		if (force || NextSessionClean < DateTime.UtcNow) {
 			NextSessionClean = DateTime.UtcNow.AddSeconds(Config.Session.CleanExpired);
-			Task.Run(() => {
-				var date = DateTime.UtcNow;
-				foreach (var sess in SessionList)
-					if (sess.Value.Session.Expire < date) {
-						SessionList.TryRemove(sess.Key, out _);
-						if (Config.SessionHandler is not null)
-							Config.SessionHandler(SessionLogType.Expire, sess.Value).Wait();
+			Task.Run(async() => {
+				try {
+					var date = DateTime.UtcNow;
+					foreach (var sess in SessionList) {
+						if (sess.Value.Session.Expire < date) {
+							SessionList.TryRemove(sess.Key, out _);
+							if (Config.SessionHandler is not null) 
+								await Config.SessionHandler(SessionLogType.Expire, sess.Value);			
+						}
 					}
+				} catch (Exception ex) {
+					Console.WriteLine($"Background Session Cleanup Error: {ex.Message}");
+				}
 			});
 		}
 	}
